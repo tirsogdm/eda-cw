@@ -5,7 +5,7 @@ provider "registry.terraform.io/harvester/harvester" {
   version     = "0.6.6"
   constraints = "0.6.6"
   hashes = [
-    "h1:Dld+jbWomwVsaw2Bgkgkq9VW489bR3mFlZr/0wjNI20=",
+    "h1:PomBgzzzGtkyoaCS8uRH6Y1iZH8VatLyC82HMqT3FPo=",
     "zh:148738a15c6f6c9e4bb44fa6dceedb45ba5261d731806b5b3cbd6bd67c176062",
     "zh:4ce7bf2adb5557e7b78053dedf04f377240c67ad87894760c46a6bd2d2dfa6b6",
     "zh:cfbcc4b63ff097532351afa24a28737369f47a58e9d8573ed10c641c644820a9",
@@ -17,7 +17,7 @@ provider "registry.terraform.io/hashicorp/random" {
   version     = "3.7.1"
   constraints = "3.7.1"
   hashes = [
-    "h1:t152MY0tQH4a8fLzTtEWx70ITd3azVOrFDn/pQblbto=",
+    "h1:/qtweZW2sk0kBNiQM02RvBXmlVdI9oYqRMCyBZ8XA98=",
     "zh:3193b89b43bf5805493e290374cdda5132578de6535f8009547c8b5d7a351585",
     "zh:3218320de4be943e5812ed3de995946056db86eb8d03aa3f074e0c7316599bef",
     "zh:419861805a37fa443e7d63b69fb3279926ccf98a79d256c422d5d82f0f387d1d",

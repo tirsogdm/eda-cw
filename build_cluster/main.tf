@@ -69,6 +69,13 @@ resource "harvester_virtualmachine" "host" {
   cloudinit {
     user_data_secret_name = harvester_cloudinit_secret.cloud-config.name
   }
+
+  # Added timeouts!
+  timeouts {
+    create = "5m"
+    update = "5m"
+    delete = "5m"
+  }
 }
 
 resource "harvester_virtualmachine" "worker" {
@@ -113,4 +120,11 @@ resource "harvester_virtualmachine" "worker" {
   cloudinit {
     user_data_secret_name = harvester_cloudinit_secret.cloud-config.name
   }
+     
+  # Added timeouts!
+  timeouts {
+    create = "5m"
+    update = "5m"
+    delete = "5m"
+  }  
 }

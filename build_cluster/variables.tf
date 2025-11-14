@@ -6,7 +6,7 @@ variable img_display_name {
 # your rancher username (e.g. ucbcdwb)
 variable username {
   type = string
-  default = ""
+  default = "ucabtg2"
 }
 
 variable namespace_ending {
@@ -17,7 +17,7 @@ variable namespace_ending {
 # The name of your ssh key uploaded to rancher 
 variable keyname {
   type = string
-  default = ""
+  default = "comp0235keydemo"
 }
 
 variable host {
