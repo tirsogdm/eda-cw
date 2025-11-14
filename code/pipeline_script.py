@@ -1,7 +1,33 @@
+import os
 import sys
 from subprocess import Popen, PIPE
 from Bio import SeqIO
 
+# ---------------------------------
+# ------ Configuration paths ------
+# ---------------------------------
+
+# Python: binary
+PY_BIN = os.environ.get("PY_BIN", "python3")
+
+# S4Pred: script
+S4PRED_SCRIPT = os.environ.get(
+    "S4PRED_SCRIPT", 
+    os.path.expanduser("~/comp0235/tools/s4pred/run_model.py")
+)
+
+# HHSearch: binary and database
+HHSEARCH_BIN = os.environ.get(
+    "HHSEARCH_BIN", 
+    os.path.expanduser("~/comp0235/tools/hh-suite/bin/hhsearch")
+)
+
+HHSEARCH_DB = os.environ.get(
+    "HHSEARCH_DB", 
+    os.path.expanduser("~/comp0235/data/pdb70/pdb70")
+)
+
+# ---------------------------------
 """
 usage: python pipeline_script.py INPUT.fasta  
 approx 5min per analysis
@@ -21,9 +47,7 @@ def run_hhsearch(a3m_file):
     """
     Run HHSearch to produce the hhr file
     """
-    cmd = ['/home/dbuchan/Applications/hh-suite-3.3.0/build/bin/hhsearch',
-           '-i', a3m_file, '-cpu', '1', '-d', 
-           '/home/dbuchan/Data/hhdb/pdb70/pdb70']
+    cmd = [HHSEARCH_BIN, '-i', a3m_file, '-cpu', '1', '-d', HHSEARCH_DB]
     print(f'STEP 3: RUNNING HHSEARCH: {" ".join(cmd)}')
     p = Popen(cmd, stdin=PIPE,stdout=PIPE, stderr=PIPE)
     out, err = p.communicate()
@@ -51,8 +75,7 @@ def run_s4pred(input_file, out_file):
     """
     Runs the s4pred secondary structure predictor to produce the horiz file
     """
-    cmd = ['/usr/bin/python3', '/home/dbuchan/Code/s4pred/run_model.py',
-           '-t', 'horiz', '-T', '1', input_file]
+    cmd = [PY_BIN, S4PRED_SCRIPT, '-t', 'horiz', '-T', '1', input_file]
     print(f'STEP 1: RUNNING S4PRED: {" ".join(cmd)}')
     p = Popen(cmd, stdin=PIPE,stdout=PIPE, stderr=PIPE)
     out, err = p.communicate()
