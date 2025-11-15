@@ -1,0 +1,29 @@
+pipeline_root: "/home/almalinux/protein_pipeline"
+pipeline_code_dir: "{{ pipeline_root }}/code"
+pipeline_tools_dir: "{{ pipeline_root }}/tools"
+pipeline_data_dir: "{{ pipeline_root }}/data"
+pipeline_venv_dir: "{{ pipeline_root }}/venv"
+
+repo_code_dir: "/home/almalinux/eda-cw/code"
+
+pipeline_python_deps:
+  - biopython
+  - numpy
+  - scipy
+  - torch
+
+ansible_python_interpreter: /usr/bin/python3
+
+# S4Pred
+s4pred_repo: "https://github.com/psipred/s4pred.git"
+s4pred_dir: "{{ pipeline_tools_dir }}/s4pred"
+s4pred_weights_url: "http://bioinfadmin.cs.ucl.ac.uk/downloads/s4pred/weights.tar.gz"
+
+# HHSuite
+hhsuite_dir: "{{ pipeline_tools_dir }}/hh-suite"
+hhsuite_tar_url: "https://github.com/soedinglab/hh-suite/releases/download/v3.3.0/hhsuite-3.3.0-AVX2-Linux.tar.gz"
+hhsuite_tar_path: "{{ hhsuite_dir }}/hhsuite-3.3.0-AVX2-Linux.tar.gz"
+
+pdb70_dir: "{{ pipeline_data_dir }}/pdb70"
+pdb70_tar_url: "https://wwwuser.gwdg.de/~compbiol/data/hhsuite/databases/hhsuite_dbs/pdb70_from_mmcif_latest.tar.gz"
+pdb70_tar_path: "{{ pdb70_dir }}/pdb70_from_mmcif_latest.tar.gz"

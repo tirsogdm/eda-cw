@@ -1,0 +1,44 @@
+- name: Ensure HHsuite directory exists
+  file:
+    path: "{{ hhsuite_dir }}"
+    state: directory
+    mode: '0755'
+  
+- name: Download HHsuite static AVX2 tarball
+  get_url:
+    url: "{{ hhsuite_tar_url }}"
+    dest: "{{ hhsuite_tar_path }}"
+    mode: '0644'
+    force: no
+  when: hhsuite_tar_url | default('') | length > 0
+
+- name: Extract HHsuite tarball
+  unarchive:
+    src: "{{ hhsuite_tar_path }}"
+    dest: "{{ hhsuite_dir }}"
+    remote_src: yes
+    creates: "{{ hhsuite_dir }}/bin/hhsearch"
+  when: hhsuite_tar_url | default('') | length > 0
+
+# PDB70 database setup
+# - name: Ensure pdb70 directory exists
+#   file:
+#     path: "{{ pdb70_dir }}"
+#     state: directory
+#     mode: '0755'
+  
+# - name: Download pdb70 database tarball
+#   get_url:
+#     url: "{{ pdb70_tar_url }}"
+#     dest: "{{ pdb70_tar_path }}"
+#     mode: '0644'
+#     force: no
+#   when: pdb70_tar_url | default('') | length > 0
+
+# - name: Extract pdb70 database tarball
+#   unarchive:
+#     src: "{{ pdb70_tar_path }}"
+#     dest: "{{ pdb70_dir }}"
+#     remote_src: yes
+#     creates: "{{ pdb70_dir }}/pdb70_a3m.ffdata"
+#   when: pdb70_tar_url | default('') | length > 0

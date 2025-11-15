@@ -1,0 +1,7 @@
+- hosts: workers
+  become: yes
+  roles:
+  - common
+  - code
+  - s4pred
+  - hhsuite

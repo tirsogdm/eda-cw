@@ -1,0 +1,22 @@
+- name: Clone S4Pred repository
+  git:
+    repo: "{{ s4pred_repo }}"
+    dest: "{{ s4pred_dir }}"
+    version: "main"
+
+- name : Download S4Pred weights
+  get_url:
+    url: "{{ s4pred_weights_url }}"
+    dest: "{{ s4pred_dir }}/weights.tar.gz"
+    mode: '0644'
+    force: no
+    validate_certs: no # server has invalid/expired certificate
+  when: s4pred_weights_url | default('') | length > 0
+
+- name: Extract S4Pred weights
+  unarchive:
+    src: "{{ s4pred_dir }}/weights.tar.gz"
+    dest: "{{ s4pred_dir }}"
+    remote_src: yes
+    creates: "{{ s4pred_dir }}/weights"
+  when: s4pred_weights_url | default('') | length > 0
