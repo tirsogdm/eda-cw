@@ -13,18 +13,18 @@ PY_BIN = os.environ.get("PY_BIN", "python3")
 # S4Pred: script
 S4PRED_SCRIPT = os.environ.get(
     "S4PRED_SCRIPT", 
-    os.path.expanduser("~/comp0235/tools/s4pred/run_model.py")
+    os.path.expanduser("~/protein_pipeline/tools/s4pred/run_model.py")
 )
 
 # HHSearch: binary and database
 HHSEARCH_BIN = os.environ.get(
     "HHSEARCH_BIN", 
-    os.path.expanduser("~/comp0235/tools/hh-suite/bin/hhsearch")
+    os.path.expanduser("~/protein_pipeline/tools/hh-suite/bin/hhsearch")
 )
 
 HHSEARCH_DB = os.environ.get(
     "HHSEARCH_DB", 
-    os.path.expanduser("~/comp0235/data/pdb70/pdb70")
+    os.path.expanduser("~/protein_pipeline/data/pdb70/pdb70")
 )
 
 # ---------------------------------
@@ -37,10 +37,13 @@ def run_parser(hhr_file):
     """
     Run the results_parser.py over the hhr file to produce the output summary
     """
-    cmd = ['python', './results_parser.py', hhr_file]
+    cmd = [PY_BIN, './results_parser.py', hhr_file]
     print(f'STEP 4: RUNNING PARSER: {" ".join(cmd)}')
     p = Popen(cmd, stdin=PIPE,stdout=PIPE, stderr=PIPE)
     out, err = p.communicate()
+    if p.returncode != 0:
+        print("Parser FAILED:", err.decode("utf-8"), file=sys.stderr)
+        sys.exit(1)
     print(out.decode("utf-8"))
 
 def run_hhsearch(a3m_file):
@@ -82,7 +85,6 @@ def run_s4pred(input_file, out_file):
     with open(out_file, "w") as fh_out:
         fh_out.write(out.decode("utf-8"))
 
-    
 def read_input(file):
     """
     Function reads a fasta formatted file of protein sequences
