@@ -46,14 +46,18 @@ def run_parser(hhr_file):
         sys.exit(1)
     print(out.decode("utf-8"))
 
-def run_hhsearch(a3m_file):
+def run_hhsearch(a3m_file, hhr_file):
     """
     Run HHSearch to produce the hhr file
     """
-    cmd = [HHSEARCH_BIN, '-i', a3m_file, '-cpu', '1', '-d', HHSEARCH_DB]
+    cmd = [HHSEARCH_BIN, '-i', a3m_file, '-cpu', '1', '-d', HHSEARCH_DB, '-o', hhr_file]
     print(f'STEP 3: RUNNING HHSEARCH: {" ".join(cmd)}')
     p = Popen(cmd, stdin=PIPE,stdout=PIPE, stderr=PIPE)
     out, err = p.communicate()
+
+    if p.returncode != 0:
+        print("HHSearch FAILED:", err.decode("utf-8"), file=sys.stderr)
+        sys.exit(1)
 
 def read_horiz(tmp_file, horiz_file, a3m_file):
     """
@@ -111,5 +115,5 @@ if __name__ == "__main__":
             fh_out.write(f"{v}\n")
         run_s4pred(tmp_file, horiz_file)
         read_horiz(tmp_file, horiz_file, a3m_file)
-        run_hhsearch(a3m_file)
+        run_hhsearch(a3m_file, hhr_file)
         run_parser(hhr_file)

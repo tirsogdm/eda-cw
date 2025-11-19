@@ -1,12 +1,16 @@
 from Bio import SearchIO
 import numpy as np
 from scipy.stats import gmean
+import sys
+
+hhr_path = sys.argv[1] if len(sys.argv) > 1 else "tmp.hrr"
 
 best_hit = []
 best_score = 0
 good_hit_scores  = []
 id = ''
-for result in SearchIO.parse('tmp.hhr', 'hhsuite3-text'):
+
+for result in SearchIO.parse(hhr_path, 'hhsuite3-text'):
     id=result.id
     for hit in result.hits:
         if hit.score >= best_score:

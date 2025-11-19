@@ -22,7 +22,7 @@
 
 # PDB70 database setup
 - name: Ensure pdb70 directory exists
-  file:
+  ansible.builtin.file:
     path: "{{ pdb70_dir }}"
     state: directory
     owner: "{{ ansible_user | default('almalinux') }}"
@@ -30,6 +30,7 @@
     mode: '0755'
   
 - name: Stream-extract pdb70 database (no tarball on disk)
+  become: false
   ansible.builtin.shell: >
     curl -L "{{ pdb70_tar_url }}" | tar xzf -
   args:
