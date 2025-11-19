@@ -6,7 +6,7 @@
 
 - name: Sync code from repository to pipeline code directory
   ansible.builtin.synchronize:
-    src: "{{ repo_code_dir }}/"
+    src: "{{ repo_dir }}/code/"
     dest: "{{ pipeline_code_dir }}/"
     delete: false
     rsync_opts:

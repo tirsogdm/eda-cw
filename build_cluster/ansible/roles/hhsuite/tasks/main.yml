@@ -21,24 +21,18 @@
   when: hhsuite_tar_url | default('') | length > 0
 
 # PDB70 database setup
-# - name: Ensure pdb70 directory exists
-#   file:
-#     path: "{{ pdb70_dir }}"
-#     state: directory
-#     mode: '0755'
+- name: Ensure pdb70 directory exists
+  file:
+    path: "{{ pdb70_dir }}"
+    state: directory
+    owner: "{{ ansible_user | default('almalinux') }}"
+    group: "{{ ansible_user | default('almalinux') }}"
+    mode: '0755'
   
-# - name: Download pdb70 database tarball
-#   get_url:
-#     url: "{{ pdb70_tar_url }}"
-#     dest: "{{ pdb70_tar_path }}"
-#     mode: '0644'
-#     force: no
-#   when: pdb70_tar_url | default('') | length > 0
-
-# - name: Extract pdb70 database tarball
-#   unarchive:
-#     src: "{{ pdb70_tar_path }}"
-#     dest: "{{ pdb70_dir }}"
-#     remote_src: yes
-#     creates: "{{ pdb70_dir }}/pdb70_a3m.ffdata"
-#   when: pdb70_tar_url | default('') | length > 0
+- name: Stream-extract pdb70 database (no tarball on disk)
+  ansible.builtin.shell: >
+    curl -L "{{ pdb70_tar_url }}" | tar xzf -
+  args:
+    chdir: "{{ pdb70_dir }}"
+    creates: "{{ pdb70_dir }}/pdb70_a3m.ffdata"
+  when: pdb70_tar_url | default('') | length > 0

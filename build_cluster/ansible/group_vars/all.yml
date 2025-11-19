@@ -4,7 +4,9 @@ pipeline_tools_dir: "{{ pipeline_root }}/tools"
 pipeline_data_dir: "{{ pipeline_root }}/data"
 pipeline_venv_dir: "{{ pipeline_root }}/venv"
 
-repo_code_dir: "/home/almalinux/eda-cw/code"
+repo_dir: "/home/almalinux/eda-cw"
+
+ansible_python_interpreter: /usr/bin/python3
 
 pipeline_python_deps:
   - biopython
@@ -12,7 +14,6 @@ pipeline_python_deps:
   - scipy
   - torch
 
-ansible_python_interpreter: /usr/bin/python3
 
 # S4Pred
 s4pred_repo: "https://github.com/psipred/s4pred.git"
@@ -26,4 +27,8 @@ hhsuite_tar_path: "{{ hhsuite_dir }}/hhsuite-3.3.0-AVX2-Linux.tar.gz"
 
 pdb70_dir: "{{ pipeline_data_dir }}/pdb70"
 pdb70_tar_url: "https://wwwuser.gwdg.de/~compbiol/data/hhsuite/databases/hhsuite_dbs/pdb70_from_mmcif_latest.tar.gz"
-pdb70_tar_path: "{{ pdb70_dir }}/pdb70_from_mmcif_latest.tar.gz"
+
+# Mouse proteome storage
+proteome_fasta_filename: "UP000000589_10090.fasta"
+proteome_fasta_path: "{{ pipeline_data_dir }}/{{ proteome_fasta_filename }}"
+proteome_db_path: "{{ pipeline_data_dir }}/mouse_proteome.db"

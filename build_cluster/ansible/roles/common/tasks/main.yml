@@ -6,6 +6,7 @@
       - python3-pip
       - git
       - wget
+      - curl
     state: present
 
 - name: Create pipeline root directories
@@ -21,7 +22,7 @@
 
 - name: Create Python virtual environment
   ansible.builtin.command:
-    cmd: python3 -m venv "{{ pipeline_venv_dir }}"
+    cmd: python3 -m venv "{{ pipeline_venv_dir }}" # ansible_python_interpreter
     creates: "{{ pipeline_venv_dir }}/bin/activate"
 
 - name: Upgrade pip in venv

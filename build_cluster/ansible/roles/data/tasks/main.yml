@@ -1,0 +1,36 @@
+- name: Ensure data directory exists on worker
+  file:
+    path: "{{ pipeline_data_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Check mouse proteome FASTA exists on localhost
+  stat:
+    path: "{{ repo_dir }}/data/{{ proteome_fasta_filename }}"
+  delegate_to: localhost
+  run_once: true
+  register: local_fasta_src_stat
+
+- name: Fail if FASTA file is missing on localhost
+  fail:
+    msg: >
+      Mouse proteome FASTA not found at {{ repo_dir }}/data/{{ proteome_fasta_filename }}.
+      Please download it before running this role.
+  when: not local_fasta_src_stat.stat.exists
+
+- name: Copy mouse proteome FASTA to worker
+  ansible.builtin.copy:
+    src: "{{ repo_dir }}/data/{{ proteome_fasta_filename }}"
+    dest: "{{ proteome_fasta_path }}"
+    mode: "0644"
+
+- name: Build mouse proteome SQLite database from FASTA on worker
+  ansible.builtin.command:
+    cmd: >
+      {{ pipeline_venv_dir }}/bin/python
+      {{ pipeline_code_dir }}/build_proteome_db.py
+      {{ proteome_fasta_path }}
+      {{ proteome_db_path }}
+  args:
+    chdir: "{{ pipeline_code_dir }}"
+    creates: "{{ proteome_db_path }}"
