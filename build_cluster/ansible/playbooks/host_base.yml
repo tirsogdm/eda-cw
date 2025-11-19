@@ -1,0 +1,4 @@
+- hosts: mgmt
+  become: true
+  roles:
+  - rabbitmq
