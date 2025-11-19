@@ -3,7 +3,7 @@ import numpy as np
 from scipy.stats import gmean
 import sys
 
-hhr_path = sys.argv[1] if len(sys.argv) > 1 else "tmp.hrr"
+hhr_path = sys.argv[1] if len(sys.argv) > 1 else "tmp.hhr"
 
 best_hit = []
 best_score = 0
