@@ -1,4 +1,6 @@
 - hosts: mgmt
   become: true
   roles:
+  - common_host
+  - code
   - rabbitmq

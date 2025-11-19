@@ -13,7 +13,10 @@ pipeline_python_deps:
   - numpy
   - scipy
   - torch
+  - celery
 
+host_python_deps:
+  - celery
 
 # S4Pred
 s4pred_repo: "https://github.com/psipred/s4pred.git"
