@@ -34,3 +34,36 @@
     name: rabbitmq-server
     enabled: true
     state: started
+
+- name: Enable RabbitMQ management plugin
+  ansible.builtin.command:
+    cmd: rabbitmq-plugins enable rabbitmq_management
+  args:
+    creates: /etc/rabbitmq/enabled_plugins
+
+- name: Ensure RabbitMQ admin user exists
+  ansible.builtin.command:
+    cmd: rabbitmqctl add_user admin abc123
+  register: add_user_result
+  failed_when:
+    - add_user_result.rc != 0
+    - "'already exists' not in add_user_result.stderr"
+  changed_when: add_user_result.rc == 0
+
+- name: Get admin user tags
+  ansible.builtin.command:
+    cmd: rabbitmqctl list_users
+  register: user_list
+
+- name: Ensure admin user has administrator tag
+  ansible.builtin.command:
+    cmd: rabbitmqctl set_user_tags admin administrator
+  register: tag_result
+  when: >
+    not (
+      user_list.stdout_lines
+        | select('match', '^admin\s+\\[administrator\\]\s*$')
+        | list
+      )
+  failed_when: tag_result.rc != 0
+  changed_when: tag_result.rc == 0
