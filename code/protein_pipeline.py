@@ -1,7 +1,9 @@
 import os
 import sys
 import json
+import tempfile
 from subprocess import Popen, PIPE
+from pathlib import Path
 from Bio import SeqIO
 
 from storage import get_sequence
@@ -30,21 +32,14 @@ HHSEARCH_DB = os.environ.get(
     os.path.expanduser("~/protein_pipeline/data/pdb70/pdb70")
 )
 
-# Default temporary filenames (per process)
-TMP_FAS = "tmp.fas"
-TMP_HORIZ = "tmp.horiz"
-TMP_A3M = "tmp.a3m"
-TMP_HHR = "tmp.hhr"
-PARSE_OUT = "hhr_parse.out"
-
 # ---------------------------------
 
-def run_parser(hhr_file: str):
+def run_parser(hhr_file: str, out_file: str):
     """
     Run the results_parser.py over the hhr file to produce the output summary.
     Writes PARSE_OUT in the current directory and prints its contents to stdout.
     """
-    cmd = [PY_BIN, './results_parser.py', hhr_file]
+    cmd = [PY_BIN, './results_parser.py', hhr_file, out_file]
     print(f'STEP 4: RUNNING PARSER: {" ".join(cmd)}')
     p = Popen(cmd, stdin=PIPE,stdout=PIPE, stderr=PIPE)
     out, err = p.communicate()
@@ -106,38 +101,46 @@ def get_result(parse_file: str) -> dict:
         dict with keys:
             query_id, best_hit, best_evalue, best_score, score_mean, score_std, score_gmean
     """
-    with open(parse_file, "r") as f:
-        header = f.readline().strip().split(",")
-        row = f.readline().strip().split(",")
+    with open(parse_file, "r") as fh_in:
+        header = fh_in.readline().strip().split(",")
+        row = fh_in.readline().strip().split(",")
     return dict(zip(header, row))
 
 def run_pipeline_for_sequence(protein_id: str, sequence: str) -> dict:
     """
     Run the 4-step pipeline for a single (protein_id, sequence) pair.
+    Creates a unique temporary working directory for each run.
 
     Returns:
         dict with keys:
             query_id, best_hit, best_evalue, best_score, score_mean, score_std, score_gmean
     """
-    # 1. Write tmp FASTA for this sequence
-    with open(TMP_FAS, "w") as fh_out:
-        fh_out.write(f">{protein_id}\n")
-        fh_out.write(f"{sequence}\n")
+    # --- 1. Create unique working directory ----
+    work_dir = Path(tempfile.mkdtemp(prefix=f"pp_{protein_id.replace('|','_')}_"))
+    print(f"[DEBUG] Working directory: {work_dir}")
 
-    # 2. S4Pred
-    run_s4pred(TMP_FAS, TMP_HORIZ)
+    tmp_fas   = work_dir / "tmp.fas"
+    tmp_horiz = work_dir / "tmp.horiz"
+    tmp_a3m   = work_dir / "tmp.a3m"
+    tmp_hhr   = work_dir / "tmp.hhr"
+    parse_out = work_dir / "hhr_parse.out"
 
-    # 3. Rewrite to A3M
-    read_horiz(TMP_FAS, TMP_HORIZ, TMP_A3M)
+    # --- 2. Write tmp FASTA for this sequence ---
+    with open(tmp_fas, "w") as fh_out:
+        fh_out.write(f">{protein_id}\n{sequence}\n")
 
-    # 4. HHSerach
-    run_hhsearch(TMP_A3M, TMP_HHR)
-    
-    # 5. Parse HHSearch output
-    run_parser(TMP_HHR)
+    # --- 3. Run all pipeline steps ---
+    run_s4pred(str(tmp_fas), str(tmp_horiz))
+    read_horiz(str(tmp_fas), str(tmp_horiz), str(tmp_a3m))
+    run_hhsearch(str(tmp_a3m), str(tmp_hhr))
+    run_parser(str(tmp_hhr),  str(parse_out))
 
-    # 6. Read parsed result from hhr_parse.out
-    result = get_result(PARSE_OUT)
+    # --- 4. Read parsed result from hhr_parse.out ---
+    result = get_result(str(parse_out))
+
+    # --- 5. Clean up tmp directory
+    # shutil.rmtree(work_dir, ignore_errors=True)
+
     return result
 
 def run_pipeline_for_id(protein_id: str) -> dict:
@@ -155,7 +158,7 @@ def run_pipeline_for_id(protein_id: str) -> dict:
 if __name__ == "__main__":
     # TODO: Extend to accept either id,list of ids, FASTA file?
     if len(sys.argv) != 2:
-        print("Usage: python3 pipeline_script.py PROTEIN_ID", file=sys.stderr)
+        print("Usage: python3 protein_pipeline.py PROTEIN_ID", file=sys.stderr)
         sys.exit(1)
     
     protein_id = sys.argv[1]

@@ -18,11 +18,3 @@ app = Celery(
     broker=BROKER_URL,
     backend=RESULT_BACKEND
 )
-
-# app.conf.update(
-#     task_serializer="json",
-#     accept_content=["json"]
-#     result_serializer="json",
-#     timezone="UTC",
-#     enable_utc=True,
-# )
