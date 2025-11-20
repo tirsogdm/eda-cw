@@ -13,7 +13,10 @@ from storage import get_sequence
 # ---------------------------------
 
 # Python: binary
-PY_BIN = os.environ.get("PY_BIN", "python3")
+PY_BIN = os.environ.get(
+    "PY_BIN", 
+    "python3"
+)
 
 # S4Pred: script
 S4PRED_SCRIPT = os.environ.get(
@@ -32,7 +35,17 @@ HHSEARCH_DB = os.environ.get(
     os.path.expanduser("~/protein_pipeline/data/pdb70/pdb70")
 )
 
-# ---------------------------------
+# ----
+
+# Base directory for temporary work dirs
+BASE_TMP_DIR = Path(
+    os.environ.get(
+        "BASE_TMP_DIR",
+        "~/protein_pipeline/code/tmp"
+    )
+).expanduser()
+
+# ---
 
 def run_parser(hhr_file: str, out_file: str):
     """
@@ -116,7 +129,13 @@ def run_pipeline_for_sequence(protein_id: str, sequence: str) -> dict:
             query_id, best_hit, best_evalue, best_score, score_mean, score_std, score_gmean
     """
     # --- 1. Create unique working directory ----
-    work_dir = Path(tempfile.mkdtemp(prefix=f"pp_{protein_id.replace('|','_')}_"))
+    BASE_TMP_DIR.mkdir(parents=True, exist_ok=True)
+    work_dir = Path(
+        tempfile.mkdtemp(
+            prefix=f"pp_{protein_id.replace('|','_')}_",
+            dir=str(BASE_TMP_DIR)
+        )
+    )
     print(f"[DEBUG] Working directory: {work_dir}")
 
     tmp_fas   = work_dir / "tmp.fas"
