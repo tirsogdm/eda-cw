@@ -39,7 +39,7 @@ PARSE_OUT = "hhr_parse.out"
 
 # ---------------------------------
 
-def run_parser(hhr_file):
+def run_parser(hhr_file: str):
     """
     Run the results_parser.py over the hhr file to produce the output summary.
     Writes PARSE_OUT in the current directory and prints its contents to stdout.
@@ -53,7 +53,7 @@ def run_parser(hhr_file):
         sys.exit(1)
     print(out.decode("utf-8"))
 
-def run_hhsearch(a3m_file, hhr_file):
+def run_hhsearch(a3m_file: str, hhr_file: str):
     """
     Run HHSearch to produce the hhr file.
     """
@@ -65,7 +65,7 @@ def run_hhsearch(a3m_file, hhr_file):
         print("HHSearch FAILED:", err.decode("utf-8"), file=sys.stderr)
         sys.exit(1)
 
-def read_horiz(tmp_file, horiz_file, a3m_file):
+def read_horiz(tmp_file: str, horiz_file: str, a3m_file: str):
     """
     Parse horiz file and concatenate the information to a new tmp a3m file.
     """
@@ -84,7 +84,7 @@ def read_horiz(tmp_file, horiz_file, a3m_file):
         fh_out.write(f">ss_pred\n{pred}\n>ss_conf\n{conf}\n")
         fh_out.write(contents)
 
-def run_s4pred(input_file, out_file):
+def run_s4pred(input_file: str, out_file: str):
     """
     Runs the s4pred secondary structure predictor to produce the horiz file.
     """
@@ -98,20 +98,26 @@ def run_s4pred(input_file, out_file):
     with open(out_file, "w") as fh_out:
         fh_out.write(out.decode("utf-8"))
 
-def get_result(parse_file):
+def get_result(parse_file: str) -> dict:
     """
     Read CSV produced by results.parser and return dict mapping column_name -> value.
+
+    Returns:
+        dict with keys:
+            query_id, best_hit, best_evalue, best_score, score_mean, score_std, score_gmean
     """
     with open(parse_file, "r") as f:
         header = f.readline().strip().split(",")
         row = f.readline().strip().split(",")
     return dict(zip(header, row))
 
-def run_pipeline_for_sequence(protein_id, sequence):
+def run_pipeline_for_sequence(protein_id: str, sequence: str) -> dict:
     """
     Run the 4-step pipeline for a single (protein_id, sequence) pair.
 
     Returns:
+        dict with keys:
+            query_id, best_hit, best_evalue, best_score, score_mean, score_std, score_gmean
     """
     # 1. Write tmp FASTA for this sequence
     with open(TMP_FAS, "w") as fh_out:
@@ -134,9 +140,13 @@ def run_pipeline_for_sequence(protein_id, sequence):
     result = get_result(PARSE_OUT)
     return result
 
-def run_pipeline_for_id(protein_id):
+def run_pipeline_for_id(protein_id: str) -> dict:
     """
     Fetch sequence for protein_id using storage.get_sequence() and run full pipeline.
+
+    Returns:
+        dict with keys:
+            query_id, best_hit, best_evalue, best_score, score_mean, score_std, score_gmean
     """
     seq = get_sequence(protein_id)
     return run_pipeline_for_sequence(protein_id, seq)
