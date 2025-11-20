@@ -16,7 +16,6 @@ def read_input(file):
         ids.append(record.id)
     return(ids)
 
-
 if __name__ == "__main__":
     ids = read_input(sys.argv[1])
     # print(ids)

@@ -9,7 +9,7 @@ BROKER_URL = os.environ.get(
 
 RESULT_BACKEND = os.environ.get(
     "CELERY_RESULT_BACKEND",
-    None
+    "rpc://"
 )
 
 app = Celery(
@@ -17,3 +17,5 @@ app = Celery(
     broker=BROKER_URL,
     backend=RESULT_BACKEND
 )
+
+app.conf.task_default_queue = "protein"
