@@ -16,21 +16,21 @@ def generate_inventory():
     data = json.loads(out.stdout)
 
     worker_ips = data["worker_ips"]["value"]
-    mgmt_ips = data["host_ips"]["value"]
+    host_ip = data["host_ips"]["value"]
 
     # TESTING -- remove line
-    worker_ips = [ip for ip in worker_ips if ip in ["10.134.12.200"]]
+    worker_ips = [ip for ip in worker_ips if ip in ["10.134.12.177"]]
 
     hostvars = {}
     groups = {}
 
     # Mgmt group
-    mgmt_name = "mgmt-node"
-    hostvars[mgmt_name] = {
-        "ansible_host": mgmt_ips[0],
+    host_name = "host-node"
+    hostvars[host_name] = {
+        "ansible_host": host_ip[0],
         "ansible_user": "almalinux",
     }
-    groups["mgmt"] = {"hosts": [mgmt_name]}
+    groups["hosts"] = {"hosts": [host_name]}
 
     # Workers group
     worker_names = []
@@ -44,7 +44,7 @@ def generate_inventory():
     groups["workers"] = {"hosts": worker_names}
 
     # All group
-    groups["all"] = {"children": ["mgmt", "workers"]}
+    groups["all"] = {"children": ["hosts", "workers"]}
 
     inventory = {
         "_meta": {"hostvars": hostvars},

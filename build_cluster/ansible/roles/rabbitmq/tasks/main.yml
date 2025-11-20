@@ -1,4 +1,4 @@
-- name: Install RabbitMQ repo file
+- name: Copy RabbitMQ repo file
   ansible.builtin.template:
     src: rabbitmq.repo
     dest: /etc/yum.repos.d/rabbitmq.repo
@@ -12,14 +12,27 @@
     state: present
 
 # primary RabbitMQ signing key, modern Erlang repository, RabbitMQ server repository
+- name: Copy RabbitMQ/Erlang signing keys
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/etc/pki/rpm-gpg/{{ item }}"
+    mode: "0644"
+  loop:
+    - "rabbitmq-release-signing-key.asc"
+    - "cloudsmith.rabbitmq-erlang.E495BB49CC4BBE5B.key"
+    - "cloudsmith.rabbitmq-server.9F4587F226208342.key"
+
 - name: Import RabbitMQ/Erlang signing keys
   ansible.builtin.rpm_key:
     state: present
-    key: "{{ item }}"
+    key: "/etc/pki/rpm-gpg/{{ item }}"
   loop:
-    - https://github.com/rabbitmq/signing-keys/releases/download/3.0/rabbitmq-release-signing-key.asc
-    - https://github.com/rabbitmq/signing-keys/releases/download/3.0/cloudsmith.rabbitmq-erlang.E495BB49CC4BBE5B.key 
-    - https://github.com/rabbitmq/signing-keys/releases/download/3.0/cloudsmith.rabbitmq-server.9F4587F226208342.key
+    - "rabbitmq-release-signing-key.asc"
+    - "cloudsmith.rabbitmq-erlang.E495BB49CC4BBE5B.key"
+    - "cloudsmith.rabbitmq-server.9F4587F226208342.key"
+  register: import_keys
+  failed_when: import_keys is failed
+  changed_when: import_keys is changed
 
 - name: Ensure Erlang and RabbitMQ are installed
   ansible.builtin.dnf:
@@ -54,6 +67,8 @@
   ansible.builtin.command:
     cmd: rabbitmqctl list_users
   register: user_list
+  changed_when: false
+  failed_when: user_list.rc != 0
 
 - name: Ensure admin user has administrator tag
   ansible.builtin.command:
@@ -67,3 +82,42 @@
       )
   failed_when: tag_result.rc != 0
   changed_when: tag_result.rc == 0
+
+# ---- vhost 'protein' ----
+
+- name: Check if vhost 'protein' exists
+  ansible.builtin.command:
+    cmd: rabbitmqctl list_vhosts
+  register: vhosts
+  changed_when: false
+  failed_when: vhosts.rc != 0
+
+- name: Add dedicated vhost 'protein'
+  ansible.builtin.command:
+    cmd: rabbitmqctl add_vhost protein
+  when: "'protein' not in vhosts.stdout"
+  register: add_vhost_result
+  failed_when: add_vhost_result.rc != 0
+  changed_when: add_vhost_result.rc == 0
+
+# ---- permissions for admin on vhost 'protein' ---- 
+
+- name: Check permissions for admin on vhost 'protein'
+  ansible.builtin.command:
+    cmd: rabbitmqctl list_permissions -p protein
+  register: perms
+  changed_when: false
+  failed_when: perms.rc != 0
+
+- name: Set admin user permissions on vhost 'protein'
+  ansible.builtin.command:
+    cmd: rabbitmqctl set_permissions -p protein admin ".*" ".*" ".*"
+  when: >
+      not (
+        perms.stdout_lines
+          | select('match', '^admin\s+')
+          | list
+        )
+  register: set_perms_result
+  failed_when: set_perms_result.rc != 0
+  changed_when: set_perms_result.rc == 0

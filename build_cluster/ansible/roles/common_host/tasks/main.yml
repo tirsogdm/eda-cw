@@ -9,6 +9,14 @@
       - curl
     state: present
 
+# !TODO: Relocate this task in general roles refactoring (shared with workers ofc)
+- name: Ensure host-node is resolvable on host
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    state: present
+    regexp: 'host-node$'
+    line: "{{ hostvars[groups['hosts'][0]].ansible_host }} host-node"
+
 - name: Create pipeline root directories
   file:
     path: "{{ item }}"

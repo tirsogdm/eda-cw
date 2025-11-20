@@ -1,4 +1,4 @@
-- hosts: mgmt
+- hosts: hosts
   become: true
   roles:
   - common_host

@@ -16,6 +16,7 @@ pipeline_python_deps:
   - celery
 
 host_python_deps:
+  - biopython
   - celery
 
 # S4Pred
