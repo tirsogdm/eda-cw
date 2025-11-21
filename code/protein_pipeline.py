@@ -15,24 +15,24 @@ from storage import get_sequence
 # Python: binary
 PY_BIN = os.environ.get(
     "PY_BIN", 
-    "python3"
+    sys.executable
 )
 
 # S4Pred: script
 S4PRED_SCRIPT = os.environ.get(
     "S4PRED_SCRIPT", 
-    os.path.expanduser("~/protein_pipeline/tools/s4pred/run_model.py")
+    os.path.expanduser("/opt/protein_pipeline/tools/s4pred/run_model.py")
 )
 
 # HHSearch: binary and database
 HHSEARCH_BIN = os.environ.get(
     "HHSEARCH_BIN", 
-    os.path.expanduser("~/protein_pipeline/tools/hh-suite/bin/hhsearch")
+    os.path.expanduser("/opt/protein_pipeline/tools/hh-suite/bin/hhsearch")
 )
 
 HHSEARCH_DB = os.environ.get(
     "HHSEARCH_DB", 
-    os.path.expanduser("~/protein_pipeline/data/pdb70/pdb70")
+    os.path.expanduser("/opt/protein_pipeline/data/pdb70/pdb70")
 )
 
 # ----
@@ -41,7 +41,7 @@ HHSEARCH_DB = os.environ.get(
 BASE_TMP_DIR = Path(
     os.environ.get(
         "BASE_TMP_DIR",
-        "~/protein_pipeline/code/tmp"
+        "/opt/protein_pipeline/code/tmp"
     )
 ).expanduser()
 
@@ -57,8 +57,7 @@ def run_parser(hhr_file: str, out_file: str):
     p = Popen(cmd, stdin=PIPE,stdout=PIPE, stderr=PIPE)
     out, err = p.communicate()
     if p.returncode != 0:
-        print("Parser FAILED:", err.decode("utf-8"), file=sys.stderr)
-        sys.exit(1)
+        raise RuntimeError(f"Parser failed: {err.decode('utf-8')}")
     print(out.decode("utf-8"))
 
 def run_hhsearch(a3m_file: str, hhr_file: str):
@@ -70,8 +69,7 @@ def run_hhsearch(a3m_file: str, hhr_file: str):
     p = Popen(cmd, stdin=PIPE,stdout=PIPE, stderr=PIPE)
     out, err = p.communicate()
     if p.returncode != 0:
-        print("HHSearch FAILED:", err.decode("utf-8"), file=sys.stderr)
-        sys.exit(1)
+        raise RuntimeError(f"HHSearch failed: {err.decode('utf-8')}")
 
 def read_horiz(tmp_file: str, horiz_file: str, a3m_file: str):
     """
@@ -102,7 +100,7 @@ def run_s4pred(input_file: str, out_file: str):
     out, err = p.communicate()
     if p.returncode != 0:
         print("S4Pred FAILED:", err.decode("utf-8"), file=sys.stderr)
-        sys.exit(1)
+        raise RuntimeError(f"S4Pred failed: {err.decode('utf-8')}")
     with open(out_file, "w") as fh_out:
         fh_out.write(out.decode("utf-8"))
 
@@ -183,3 +181,9 @@ if __name__ == "__main__":
     protein_id = sys.argv[1]
     result = run_pipeline_for_id(protein_id)
     print(json.dumps(result, indent=2))
+
+    """
+    Ok great! this worked! You were right about the labels. How can i view these?
+
+However, i have removed the task that changes venv to almalinux owned and group, is not required for this to run correctly. Once I finish a few more things, I'll have a look to refactor the ansible playbooks and use "become:.." to ensure that files and directories are given the ownership that is conceptually accurate. But for now, it's all working.
+    """

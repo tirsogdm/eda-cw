@@ -5,7 +5,7 @@ from functools import lru_cache
 
 DEFAULT_DB_PATH = os.environ.get(
     "MOUSE_PROTEOME_DB",
-    "/home/almalinux/protein_pipeline/data/mouse_proteome.db"
+    "/opt/protein_pipeline/data/mouse_proteome.db"
 )
 
 @lru_cache(maxsize=1)

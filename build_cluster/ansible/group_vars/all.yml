@@ -1,4 +1,4 @@
-pipeline_root: "/home/almalinux/protein_pipeline"
+pipeline_root: "/opt/protein_pipeline" # /home/almalinux/..
 pipeline_code_dir: "{{ pipeline_root }}/code"
 pipeline_tools_dir: "{{ pipeline_root }}/tools"
 pipeline_data_dir: "{{ pipeline_root }}/data"
@@ -36,3 +36,6 @@ pdb70_tar_url: "https://wwwuser.gwdg.de/~compbiol/data/hhsuite/databases/hhsuite
 proteome_fasta_filename: "UP000000589_10090.fasta"
 proteome_fasta_path: "{{ pipeline_data_dir }}/{{ proteome_fasta_filename }}"
 proteome_db_path: "{{ pipeline_data_dir }}/mouse_proteome.db"
+
+# Celery
+worker_user: "almalinux"

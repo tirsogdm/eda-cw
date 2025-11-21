@@ -1,8 +1,9 @@
 - hosts: workers
-  become: yes
+  become: true
   roles:
   - common
   - code
   - s4pred
   - hhsuite
   - data
+  - celery_worker

@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import math
 import random
 from pathlib import Path
 from typing import Optional, List
@@ -10,7 +11,7 @@ from tasks import analyse_protein
 RESULTS_DIR = Path(
     os.environ.get(
         "RESULTS_DIR",
-        "~/protein_pipeline/code/results"
+        "/opt/protein_pipeline/code/results"
     )
 ).expanduser()
 
