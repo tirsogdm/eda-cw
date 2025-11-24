@@ -11,15 +11,13 @@ Group={{ worker_user }}
 WorkingDirectory={{ pipeline_code_dir }}
 
 Environment=PYTHONUNBUFFERED=1
-Environment=PY_BIN={{ pipeline_venv_dir }}/bin/python3
 Environment=PATH={{ pipeline_venv_dir }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
 
-ExecStart={{ pipeline_venv_dir}}/bin/python3 \
-    {{ pipeline_venv_dir }}/bin/celery \
+ExecStart={{ pipeline_venv_dir }}/bin/celery \
     -A tasks worker \
     -l info \
     --concurrency={{ celery_concurrency | default(1) }} \
-    --hostname=worker@%h
+    --hostname=celery-worker.%H
 
 Restart=on-failure
 RestartSec=5

@@ -100,6 +100,15 @@
   failed_when: add_vhost_result.rc != 0
   changed_when: add_vhost_result.rc == 0
 
+# ---- delete vhost 'protein' ---- 
+- name: Optionally delete vhost 'protein' (hard reset)
+  ansible.builtin.command:
+    cmd: rabbitmqctl delete_vhost protein
+  when: rabbitmq_reset_vhost | default(false)
+  register: delete_vhost_result
+  failed_when: delete_vhost_result.rc not in [0, 2]
+  changed_when: delete_vhost_result.rc == 0
+
 # ---- permissions for admin on vhost 'protein' ---- 
 
 - name: Check permissions for admin on vhost 'protein'

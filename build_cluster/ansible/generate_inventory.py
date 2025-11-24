@@ -19,7 +19,7 @@ def generate_inventory():
     host_ip = data["host_ips"]["value"]
 
     # TESTING -- remove line
-    worker_ips = [ip for ip in worker_ips if ip in ["10.134.12.177"]]
+    # worker_ips = [ip for ip in worker_ips if ip in ["10.134.12.177"]]
 
     hostvars = {}
     groups = {}

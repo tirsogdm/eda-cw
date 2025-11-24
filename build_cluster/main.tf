@@ -72,9 +72,9 @@ resource "harvester_virtualmachine" "host" {
 
   # Added timeouts!
   timeouts {
-    create = "5m"
-    update = "5m"
-    delete = "5m"
+    create = "20m"
+    update = "20m"
+    delete = "20m"
   }
 }
 
@@ -123,8 +123,8 @@ resource "harvester_virtualmachine" "worker" {
      
   # Added timeouts!
   timeouts {
-    create = "5m"
-    update = "5m"
-    delete = "5m"
+    create = "20m"
+    update = "20m"
+    delete = "20m"
   }  
 }

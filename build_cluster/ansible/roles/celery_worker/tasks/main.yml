@@ -15,4 +15,4 @@
   ansible.builtin.systemd:
     name: celery-worker.service
     enabled: true
-    state: started
+    state: restarted
