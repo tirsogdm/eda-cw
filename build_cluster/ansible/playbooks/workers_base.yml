@@ -10,6 +10,7 @@
     - role: data
     - role: selinux
     - role: celery
+    - role: node_exporter
   handlers:
     - name: Restart celery-worker service
       ansible.builtin.systemd:

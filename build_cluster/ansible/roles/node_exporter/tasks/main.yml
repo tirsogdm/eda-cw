@@ -1,0 +1,52 @@
+- name: Ensure curl and tar are installed
+  ansible.builtin.dnf:
+    name:
+      - curl
+      - tar
+    state: present
+
+- name: Download node_exporter user
+  ansible.builtin.user:
+    name: node_exporter
+    shell: /sbin/nologin
+    system: true
+    create_home: false
+  
+- name: Download node_exporter tarball
+  ansible.builtin.get_url:
+    url: "{{ node_exporter_url }}"
+    dest: "/tmp/node_exporter.tar.gz"
+    mode: "0644"
+    force: false
+
+- name: Extract node_exporter tarball
+  ansible.builtin.unarchive:
+    src: "/tmp/node_exporter.tar.gz"
+    dest: "/tmp"
+    remote_src: true
+
+- name: Install node_exporter binary
+  ansible.builtin.copy:
+    src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter"
+    dest: "/usr/local/bin/node_exporter"
+    owner: root
+    group: root
+    mode: "0755"
+    remote_src: true
+  
+- name: Install node_exporter systemd service
+  ansible.builtin.template:
+    src: node_exporter.service.j2
+    dest: /etc/systemd/system/node_exporter.service
+    mode: "0644"
+  notify: Restart node_exporter
+
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: yes
+  
+- name: Enable and start node_exporter service
+  ansible.builtin.systemd:
+    name: node_exporter
+    enabled: yes
+    state: started

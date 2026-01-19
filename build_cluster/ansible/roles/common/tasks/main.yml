@@ -9,7 +9,7 @@
       - curl
     state: present
 
-- name: Ensure controller-node is resolvable on workers
+- name: Ensure controller-node is resolvable
   ansible.builtin.lineinfile:
     path: /etc/hosts
     state: present

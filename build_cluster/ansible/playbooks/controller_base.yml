@@ -6,3 +6,5 @@
         python_deps: "{{ controller_python_deps }}"
     - role: code
     - role: rabbitmq
+    - role: prometheus
+    - role: node_exporter

@@ -42,3 +42,10 @@ proteome_db_path: "{{ pipeline_data_dir }}/mouse_proteome.db"
 
 # Celery configuration 
 celery_broker_url: "amqp://admin:abc123@controller-node:5672/protein"
+
+# Prometheus & Node Exporter configuration
+node_exporter_version: "1.7.0"
+node_exporter_url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+
+prometheus_version: "2.49.1"
+prometheus_url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
