@@ -4,7 +4,7 @@ import time
 import math
 import random
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional
 
 from tasks import analyse_protein
 
@@ -44,12 +44,15 @@ def run_experiments(limit: Optional[int] = None, sample: bool = False):
         async_results[res_obj.id] = (protein_id, res_obj)
         print(f"[SUBMIT] protein={protein_id} | task_id={res_obj.id}")
 
+    submitted = len(selected_ids)
+    failed = 0
+    profile_count = 0 # non-NaN std & gmean
+
     # Monitor tasks
     remaining = dict(async_results)
     hits_rows = []
     sum_std = 0.0
     sum_gmean = 0.0
-    count = 0
 
     while remaining:
         print(f"[MONITOR] Pending tasks: {len(remaining)}")
@@ -58,6 +61,7 @@ def run_experiments(limit: Optional[int] = None, sample: bool = False):
                 if res_obj.successful():
                     result = res_obj.result # run_pipeline_for_id output dict
                     hits_rows.append((protein_id, result['best_hit']))
+
                     std_val = float(result['score_std'])
                     gmean_val = float(result['score_gmean'])
 
@@ -65,22 +69,26 @@ def run_experiments(limit: Optional[int] = None, sample: bool = False):
                     if not (math.isnan(std_val) or math.isnan(gmean_val)):
                         sum_std += std_val
                         sum_gmean += gmean_val
-                        count += 1
+                        profile_count += 1
                     print(f"[DONE] {protein_id} -> {result['best_hit']} (task_id={task_id})")
                 else:
-                    print(f"[ERROR] Task {task_id} for {protein_id} failed: {res_obj.result}")
+                    failed += 1
+                    print(f"[ERROR] Task {task_id} for {protein_id} failed: {repr(res_obj.result)}")
                 del remaining[task_id]
 
         if remaining:
             time.sleep(2)
-    
-    if count == 0:
-        print("[WARNING] No successfull tasks, skipping CSV generation.")
+
+    succeeded = len(hits_rows)
+    print(f"[SUMMARY] submitted={submitted} | succeeded={succeeded} | failed={failed} | profile_count={profile_count}")
+
+    if profile_count == 0:
+        print("[WARNING] No successful non-NaN tasks, skipping CSV generation.")
         return
     
     # Compute profile statistics
-    mean_std = sum_std / count
-    mean_gmean = sum_gmean / count
+    mean_std = sum_std / profile_count
+    mean_gmean = sum_gmean / profile_count
     print(f"[INFO] Mean std: {mean_std} | Mean gmean: {mean_gmean}")
 
     # Write hits_outputs.csv
@@ -95,7 +103,6 @@ def run_experiments(limit: Optional[int] = None, sample: bool = False):
         fh_out.write("ave_std,ave_gmean\n")
         fh_out.write(f"{mean_std},{mean_gmean}\n")
 
-    print(f"[OK] Analysed {count} proteins.")
     print(f"[OK] Wrote: {hits_fp}")
     print(f"[OK] Wrote: {profile_fp}")
 
@@ -108,6 +115,7 @@ def pusage_exit():
         file=sys.stderr,
     )
     sys.exit(1)
+
 
 if __name__ == "__main__":
     argc = len(sys.argv)

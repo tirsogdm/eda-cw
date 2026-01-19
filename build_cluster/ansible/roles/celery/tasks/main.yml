@@ -1,8 +1,9 @@
 - name: Install celery systemd unit
   ansible.builtin.template:
-    src: celery.service.j2
+    src: celery-worker.service.j2
     dest: /etc/systemd/system/celery-worker.service
     mode: '0644'
+  notify: Restart celery-worker service
 
 - name: Reload systemd
   ansible.builtin.systemd:

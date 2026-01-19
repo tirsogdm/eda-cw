@@ -1,0 +1,19 @@
+- name: Install SELinux management utilities
+  ansible.builtin.dnf:
+    name: policycoreutils-python-utils
+    state: present
+
+- name: Allow systemd to execute venv binaries under home (label as bin_t)
+  ansible.builtin.command: 
+    cmd: >-
+      semanage fcontext -a -t bin_t '{{ pipeline_venv_dir }}/bin(/.*)?'
+  register: semanage_venv
+  failed_when: semanage_venv.rc != 0 and ('already defined' not in (semanage_venv.stderr | lower))
+  changed_when: semanage_venv.rc == 0
+
+- name: Restore SELinux contexts for venv bin directory
+  ansible.builtin.command:
+    cmd: restorecon -Rv '{{ pipeline_venv_dir }}/bin'
+  register: restorecon_venv
+  changed_when: "'reset' in restorecon_venv.stdout"
+  notify: Restart celery-worker service

@@ -8,3 +8,10 @@
     - role: s4pred
     - role: hhsuite
     - role: data
+    - role: selinux
+    - role: celery
+  handlers:
+    - name: Restart celery-worker service
+      ansible.builtin.systemd:
+        name: celery-worker
+        state: restarted
