@@ -1,0 +1,6 @@
+celery_user: almalinux
+celery_group: almalinux
+celery_queue: protein
+celery_app_module: tasks
+celery_loglevel: INFO
+celery_results_backend: "rpc://"

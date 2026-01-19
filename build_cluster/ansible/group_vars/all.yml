@@ -39,3 +39,6 @@ proteome_fasta_url: "https://ftp.uniprot.org/pub/databases/uniprot/current_relea
 proteome_fasta_filename: "UP000000589_10090.fasta"
 proteome_fasta_path: "{{ pipeline_data_dir }}/{{ proteome_fasta_filename }}"
 proteome_db_path: "{{ pipeline_data_dir }}/mouse_proteome.db"
+
+# Celery configuration 
+celery_broker_url: "amqp://admin:abc123@controller-node:5672/protein"

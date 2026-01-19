@@ -9,7 +9,6 @@
       - curl
     state: present
 
-# !TODO: Relocate this task in general roles refactoring
 - name: Ensure controller-node is resolvable on workers
   ansible.builtin.lineinfile:
     path: /etc/hosts

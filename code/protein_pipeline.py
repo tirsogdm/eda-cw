@@ -35,8 +35,6 @@ HHSEARCH_DB = os.environ.get(
     os.path.expanduser("~/protein_pipeline/data/pdb70/pdb70")
 )
 
-# ----
-
 # Base directory for temporary work dirs
 BASE_TMP_DIR = Path(
     os.environ.get(
@@ -44,8 +42,6 @@ BASE_TMP_DIR = Path(
         "~/protein_pipeline/code/tmp"
     )
 ).expanduser()
-
-# ---
 
 def run_parser(hhr_file: str, out_file: str):
     """
