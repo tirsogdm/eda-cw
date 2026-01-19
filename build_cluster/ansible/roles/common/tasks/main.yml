@@ -10,12 +10,12 @@
     state: present
 
 # !TODO: Relocate this task in general roles refactoring
-- name: Ensure host-node is resolvable on workers
+- name: Ensure controller-node is resolvable on workers
   ansible.builtin.lineinfile:
     path: /etc/hosts
     state: present
-    regexp: 'host-node$'
-    line: "{{ hostvars[groups['hosts'][0]].ansible_host }} host-node"
+    regexp: 'controller-node$'
+    line: "{{ hostvars[groups['controller'][0]].ansible_host }} controller-node"
 
 - name: Create pipeline root directories
   file:
@@ -42,4 +42,5 @@
 - name: Install Python dependencies into venv
   ansible.builtin.pip:
     virtualenv: "{{ pipeline_venv_dir }}"
-    name: "{{ pipeline_python_deps }}"
+    name: "{{ python_deps }}"
+  when: python_deps | default([]) | length > 0

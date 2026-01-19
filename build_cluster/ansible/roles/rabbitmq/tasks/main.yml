@@ -1,9 +1,11 @@
+# Repository configuration for RabbitMQ and Erlang packages
 - name: Copy RabbitMQ repo file
   ansible.builtin.template:
     src: rabbitmq.repo
     dest: /etc/yum.repos.d/rabbitmq.repo
     mode: "0644"
 
+# Ensure RabbitMQ dependencies are installed
 - name: Ensure RabbitMQ dependencies are installed
   ansible.builtin.dnf:
     name:
@@ -11,7 +13,7 @@
       - logrotate
     state: present
 
-# primary RabbitMQ signing key, modern Erlang repository, RabbitMQ server repository
+# GPG keys for package signing - RabbitMQ release, Erlang repo, RabbitMQ server repo
 - name: Copy RabbitMQ/Erlang signing keys
   ansible.builtin.copy:
     src: "{{ item }}"
@@ -34,6 +36,7 @@
   failed_when: import_keys is failed
   changed_when: import_keys is changed
 
+# Install Erlang and RabbitMQ
 - name: Ensure Erlang and RabbitMQ are installed
   ansible.builtin.dnf:
     name:  
@@ -42,18 +45,21 @@
     state: present
     update_cache: true
 
+# Enable at boot and start RabbitMQ service now
 - name: Enable and start RabbitMQ service
   ansible.builtin.systemd:
     name: rabbitmq-server
     enabled: true
     state: started
 
+# Enable RabbitMQ management plugin for UI
 - name: Enable RabbitMQ management plugin
   ansible.builtin.command:
     cmd: rabbitmq-plugins enable rabbitmq_management
   args:
     creates: /etc/rabbitmq/enabled_plugins
 
+# Create and configure admin user
 - name: Ensure RabbitMQ admin user exists
   ansible.builtin.command:
     cmd: rabbitmqctl add_user admin abc123
@@ -63,6 +69,7 @@
     - "'already exists' not in add_user_result.stderr"
   changed_when: add_user_result.rc == 0
 
+# Set administrator tag for admin user
 - name: Get admin user tags
   ansible.builtin.command:
     cmd: rabbitmqctl list_users
@@ -84,7 +91,7 @@
   changed_when: tag_result.rc == 0
 
 # ---- vhost 'protein' ----
-
+# Create dedicated vhost 'protein'
 - name: Check if vhost 'protein' exists
   ansible.builtin.command:
     cmd: rabbitmqctl list_vhosts
@@ -100,8 +107,7 @@
   failed_when: add_vhost_result.rc != 0
   changed_when: add_vhost_result.rc == 0
 
-# ---- permissions for admin on vhost 'protein' ---- 
-
+# Set permissions for admin on vhost 'protein'
 - name: Check permissions for admin on vhost 'protein'
   ansible.builtin.command:
     cmd: rabbitmqctl list_permissions -p protein

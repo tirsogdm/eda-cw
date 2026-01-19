@@ -1,0 +1,8 @@
+- hosts: controller
+  become: true
+  roles:
+    - role: common
+      vars:
+        python_deps: "{{ controller_python_deps }}"
+    - role: code
+    - role: rabbitmq

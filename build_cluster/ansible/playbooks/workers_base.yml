@@ -1,8 +1,10 @@
 - hosts: workers
   become: yes
   roles:
-  - common
-  - code
-  - s4pred
-  - hhsuite
-  - data
+    - role: common
+      vars:
+        python_deps: "{{ worker_python_deps }}"
+    - role: code
+    - role: s4pred
+    - role: hhsuite
+    - role: data

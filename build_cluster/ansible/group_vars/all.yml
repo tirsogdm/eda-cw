@@ -8,14 +8,16 @@ repo_dir: "/home/almalinux/eda-cw"
 
 ansible_python_interpreter: /usr/bin/python3
 
-pipeline_python_deps:
+# Worker Python dependencies
+worker_python_deps:
   - biopython
   - numpy
   - scipy
   - torch
   - celery
 
-host_python_deps:
+# Controller Python dependencies
+controller_python_deps:
   - biopython
   - celery
 
@@ -33,6 +35,7 @@ pdb70_dir: "{{ pipeline_data_dir }}/pdb70"
 pdb70_tar_url: "https://wwwuser.gwdg.de/~compbiol/data/hhsuite/databases/hhsuite_dbs/pdb70_from_mmcif_latest.tar.gz"
 
 # Mouse proteome storage
+proteome_fasta_url: "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/reference_proteomes/Eukaryota/UP000000589/UP000000589_10090.fasta.gz"
 proteome_fasta_filename: "UP000000589_10090.fasta"
 proteome_fasta_path: "{{ pipeline_data_dir }}/{{ proteome_fasta_filename }}"
 proteome_db_path: "{{ pipeline_data_dir }}/mouse_proteome.db"

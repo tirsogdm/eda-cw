@@ -13,7 +13,6 @@ def generate_inventory():
 
     host_vars = {}
 
-
     counter = 0
     workers = []
 

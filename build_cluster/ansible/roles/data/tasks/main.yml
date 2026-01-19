@@ -1,28 +1,49 @@
 - name: Ensure data directory exists on worker
-  file:
+  ansible.builtin.file:
     path: "{{ pipeline_data_dir }}"
     state: directory
     mode: '0755'
 
-- name: Check mouse proteome FASTA exists on localhost
-  stat:
-    path: "{{ repo_dir }}/data/{{ proteome_fasta_filename }}"
-  delegate_to: localhost
-  run_once: true
-  register: local_fasta_src_stat
+- name: Check if FASTA already exists
+  ansible.builtin.stat:
+    path: "{{ proteome_fasta_path }}"
+  register: fasta_stat
 
-- name: Fail if FASTA file is missing on localhost
-  fail:
-    msg: >
-      Mouse proteome FASTA not found at {{ repo_dir }}/data/{{ proteome_fasta_filename }}.
-      Please download it before running this role.
-  when: not local_fasta_src_stat.stat.exists
+# Download mouse proteome FASTA gzip
+- name: Download Mouse Proteome Fasta gzip
+  ansible.builtin.get_url:
+    url: "{{ proteome_fasta_url }}"
+    dest: "{{ proteome_fasta_path }}.gz"
+    mode: '0644'
+    force: no
+  when:
+    - proteome_fasta_url | default('') | length > 0
+    - not fasta_stat.stat.exists
 
-- name: Copy mouse proteome FASTA to worker
-  ansible.builtin.copy:
-    src: "{{ repo_dir }}/data/{{ proteome_fasta_filename }}"
-    dest: "{{ proteome_fasta_path }}"
-    mode: "0644"
+- name: Decompress FASTA
+  ansible.builtin.command:
+    cmd: "gunzip -kf {{ proteome_fasta_path }}.gz"
+  args:
+    creates: "{{ proteome_fasta_path }}"
+  when:
+    - proteome_fasta_url | default('') | length > 0
+    - not fasta_stat.stat.exists
+
+- name: Remove FASTA gzip after decompression
+  ansible.builtin.file:
+    path: "{{ proteome_fasta_path }}.gz"
+    state: absent
+  when: not fasta_stat.stat.exists
+
+- name: Re-check FASTA exists
+  ansible.builtin.stat:
+    path: "{{ proteome_fasta_path }}"
+  register: fasta_stat
+
+- name: Fail if FASTA not found
+  ansible.builtin.fail:
+    msg: "Proteome FASTA file not found at {{ proteome_fasta_path }} after download and decompression."
+  when: not fasta_stat.stat.exists
 
 - name: Build mouse proteome SQLite database from FASTA on worker
   ansible.builtin.command:
