@@ -8,3 +8,5 @@
     - role: rabbitmq
     - role: prometheus
     - role: node_exporter
+    - role: selinux
+    - role: streamlit

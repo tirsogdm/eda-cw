@@ -20,7 +20,8 @@ worker_python_deps:
 controller_python_deps:
   - biopython
   - celery
-
+  - streamlit
+  
 # S4Pred
 s4pred_repo: "https://github.com/psipred/s4pred.git"
 s4pred_dir: "{{ pipeline_tools_dir }}/s4pred"

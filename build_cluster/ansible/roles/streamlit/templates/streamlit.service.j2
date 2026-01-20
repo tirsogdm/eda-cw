@@ -1,0 +1,23 @@
+[Unit]
+Description=Streamlit UI (protein pipeline)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=almalinux
+Group=almalinux
+WorkingDirectory={{ pipeline_code_dir }}
+
+Environment=PYTHONUNBUFFERED=1
+Environment=STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+
+ExecStart={{ pipeline_venv_dir }}/bin/python -m streamlit run {{ pipeline_code_dir }}/streamlit_app.py --server.address=0.0.0.0 --server.port=8501
+Restart=always
+RestartSec=5
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
