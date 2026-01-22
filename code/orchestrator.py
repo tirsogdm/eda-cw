@@ -4,7 +4,7 @@ import time
 import math
 import random
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from tasks import analyse_protein
 
@@ -15,7 +15,7 @@ RESULTS_DIR = Path(
     )
 ).expanduser()
 
-def select_ids(limit: Optional[int] = None, sample: bool = False) -> list[str]:
+def select_ids(limit: Optional[int] = None, sample: Optional[bool] = False) -> list[str]:
     """
     Generate full list of protein ids from experiment_ids to run pipeline analysis on.
     Parameters allow setting a limit (cap), and random sampling for testing.
@@ -29,10 +29,16 @@ def select_ids(limit: Optional[int] = None, sample: bool = False) -> list[str]:
         return ids[:limit]
     return ids
 
-def run_experiments(limit: Optional[int] = None, sample: bool = False):
+def run_experiments(limit: Optional[int] = None, sample: Optional[bool] = False, log: Optional[Callable[[str], None]] = None):
     """
     Submit a batch of tasks on Celery pipeline, and monitor, aggregate, and write out results.
     """
+    def _log(msg: str):
+        if log:
+            log(msg)
+        else:
+            print(msg)
+        
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
     selected_ids = select_ids(limit, sample)
@@ -42,7 +48,7 @@ def run_experiments(limit: Optional[int] = None, sample: bool = False):
     for protein_id in selected_ids:
         res_obj = analyse_protein.delay(protein_id)
         async_results[res_obj.id] = (protein_id, res_obj)
-        print(f"[SUBMIT] protein={protein_id} | task_id={res_obj.id}")
+        _log(f"[SUBMIT] protein={protein_id} | task_id={res_obj.id}")
 
     submitted = len(selected_ids)
     failed = 0
@@ -55,7 +61,7 @@ def run_experiments(limit: Optional[int] = None, sample: bool = False):
     sum_gmean = 0.0
 
     while remaining:
-        print(f"[MONITOR] Pending tasks: {len(remaining)}")
+        _log(f"[MONITOR] Pending tasks: {len(remaining)}")
         for task_id, (protein_id, res_obj) in list(remaining.items()):
             if res_obj.ready():
                 if res_obj.successful():
@@ -70,26 +76,26 @@ def run_experiments(limit: Optional[int] = None, sample: bool = False):
                         sum_std += std_val
                         sum_gmean += gmean_val
                         profile_count += 1
-                    print(f"[DONE] {protein_id} -> {result['best_hit']} (task_id={task_id})")
+                    _log(f"[DONE] {protein_id} -> {result['best_hit']} (task_id={task_id})")
                 else:
                     failed += 1
-                    print(f"[ERROR] Task {task_id} for {protein_id} failed: {repr(res_obj.result)}")
+                    _log(f"[ERROR] Task {task_id} for {protein_id} failed: {repr(res_obj.result)}")
                 del remaining[task_id]
 
         if remaining:
             time.sleep(2)
 
     succeeded = len(hits_rows)
-    print(f"[SUMMARY] submitted={submitted} | succeeded={succeeded} | failed={failed} | profile_count={profile_count}")
+    _log(f"[SUMMARY] submitted={submitted} | succeeded={succeeded} | failed={failed} | profile_count={profile_count}")
 
     if profile_count == 0:
-        print("[WARNING] No successful non-NaN tasks, skipping CSV generation.")
+        _log("[WARNING] No successful non-NaN tasks, skipping CSV generation.")
         return
     
     # Compute profile statistics
     mean_std = sum_std / profile_count
     mean_gmean = sum_gmean / profile_count
-    print(f"[INFO] Mean std: {mean_std} | Mean gmean: {mean_gmean}")
+    _log(f"[INFO] Mean std: {mean_std} | Mean gmean: {mean_gmean}")
 
     # Write hits_outputs.csv
     hits_fp = RESULTS_DIR / "hits_output.csv"
@@ -103,8 +109,8 @@ def run_experiments(limit: Optional[int] = None, sample: bool = False):
         fh_out.write("ave_std,ave_gmean\n")
         fh_out.write(f"{mean_std},{mean_gmean}\n")
 
-    print(f"[OK] Wrote: {hits_fp}")
-    print(f"[OK] Wrote: {profile_fp}")
+    _log(f"[OK] Wrote: {hits_fp}")
+    _log(f"[OK] Wrote: {profile_fp}")
 
 def pusage_exit():
     print(

@@ -27,5 +27,5 @@ variable host {
 
 variable worker {
   type    = number
-  default = 5
+  default = 4
 }
