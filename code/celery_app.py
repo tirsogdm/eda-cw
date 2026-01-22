@@ -9,7 +9,7 @@ BROKER_URL = os.environ.get(
 
 RESULT_BACKEND = os.environ.get(
     "CELERY_RESULT_BACKEND",
-    "rpc://"
+    "redis://:imaproteinpipelinerunner@controller-node:6379/1"
 )
 
 app = Celery(
@@ -18,4 +18,11 @@ app = Celery(
     backend=RESULT_BACKEND
 )
 
-app.conf.task_default_queue = "protein"
+app.conf.update(
+    task_default_queue = "protein",
+    
+    task_track_started = True,
+    result_expires = 3715200,
+)
+
+task_default_queue = "protein"

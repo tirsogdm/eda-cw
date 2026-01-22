@@ -1,0 +1,45 @@
+- name: Install Redis
+  ansible.builtin.dnf:
+    name:
+      - redis
+    state: present
+
+- name: Deploy Redis configuration
+  ansible.builtin.template:
+    src: redis.conf.j2
+    dest: /etc/redis/redis.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart Redis
+
+- name: Ensure Redis is enabled and running
+  ansible.builtin.service:
+    name: redis
+    enabled: true
+    state: started
+
+- name: Wait for Redis port to be open on controller
+  ansible.builtin.wait_for:
+    host: "{{ redis_bind_ip }}"
+    port: "{{ redis_port }}"
+    timeout: 10
+
+- name: Verify Redis is listening
+  ansible.builtin.command: "ss -lntp sport = :{{ redis_port }}"
+  register: ss_listen
+  changed_when: false
+  failed_when: ss_listen.stdout == ""
+
+- name: Ping Redis (local, with auth if set)
+  ansible.builtin.command: >
+    redis-cli
+    -h {{ redis_bind_ip }}
+    -p {{ redis_port }}
+    {% if redis_requirepass | length > 0 %}
+    -a {{ redis_requirepass }}
+    {% endif %}
+    ping
+  register: redis_ping
+  changed_when: false
+  failed_when: redis_ping.stdout is not search("PONG")

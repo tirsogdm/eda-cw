@@ -1,0 +1,11 @@
+bind {{ redis_bind_ip }}
+port {{ redis_port }}
+protected-mode yes
+
+{% if redis_requirepass | length > 0 %}
+requirepass {{ redis_requirepass }}
+{% endif %}
+
+appendonly {{ redis_appendonly }}
+timeout {{ redis_timeout }}
+tcp-keepalive {{ redis_tcp_keepalive }}

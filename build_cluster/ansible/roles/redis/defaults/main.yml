@@ -1,0 +1,7 @@
+redis_port: 6379
+
+redis_bind_ip: "{{ ansible_host | default(ansible_default_ipv4.address) }}"
+
+redis_appendonly: "no"
+redis_timeout: 0
+redis_tcp_keepalive: 300

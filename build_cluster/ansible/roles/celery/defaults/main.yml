@@ -3,4 +3,4 @@ celery_group: almalinux
 celery_queue: protein
 celery_app_module: tasks
 celery_loglevel: INFO
-celery_results_backend: "rpc://"
+celery_results_backend: "redis://:{{ redis_requirepass }}@{{ redis_host }}:{{ redis_port }}/1"
