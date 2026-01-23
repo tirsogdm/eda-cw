@@ -3,6 +3,7 @@ pipeline_code_dir: "{{ pipeline_root }}/code"
 pipeline_tools_dir: "{{ pipeline_root }}/tools"
 pipeline_data_dir: "{{ pipeline_root }}/data"
 pipeline_venv_dir: "{{ pipeline_root }}/venv"
+pipeline_runs_dir: "{{ pipeline_root }}/runs"
 
 repo_dir: "/home/almalinux/eda-cw"
 
@@ -22,6 +23,7 @@ controller_python_deps:
   - biopython
   - celery
   - streamlit
+  - redis
   
 # S4Pred
 s4pred_repo: "https://github.com/psipred/s4pred.git"
@@ -42,9 +44,6 @@ proteome_fasta_filename: "UP000000589_10090.fasta"
 proteome_fasta_path: "{{ pipeline_data_dir }}/{{ proteome_fasta_filename }}"
 proteome_db_path: "{{ pipeline_data_dir }}/mouse_proteome.db"
 
-# Celery configuration 
-celery_broker_url: "amqp://admin:abc123@controller-node:5672/protein"
-
 # Prometheus & Node Exporter configuration
 node_exporter_version: "1.7.0"
 node_exporter_url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
@@ -56,3 +55,9 @@ prometheus_url: "https://github.com/prometheus/prometheus/releases/download/v{{ 
 redis_host: "controller-node"
 redis_port: 6379
 redis_requirepass: "imaproteinpipelinerunner"
+redis_db: 1
+redis_data_dir: "/var/lib/redis"
+
+# Celery configuration 
+celery_broker_url: "amqp://admin:abc123@controller-node:5672/protein"
+celery_backend_url: "redis://:{{ redis_requirepass }}@{{ redis_host }}:{{ redis_port }}/{{ redis_db }}"

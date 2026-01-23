@@ -6,6 +6,17 @@ protected-mode yes
 requirepass {{ redis_requirepass }}
 {% endif %}
 
+dir {{ redis_data_dir }}
+dbfilename dump.rdb
+
+save 900 1
+save 300 1
+save 60 10000
+
 appendonly {{ redis_appendonly }}
+appendfilename "appendonly.aof"
+appendfsync everysec
+
+stop-writes-on-bgsave-error yes
 timeout {{ redis_timeout }}
 tcp-keepalive {{ redis_tcp_keepalive }}

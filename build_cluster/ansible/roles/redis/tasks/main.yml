@@ -4,6 +4,21 @@
       - redis
     state: present
 
+- name: Create Redis data directory
+  ansible.builtin.file:
+    path: "{{ redis_data_dir }}"
+    state: directory
+    owner: redis
+    group: redis
+    mode: '0750'
+
+- name: Restore SELinux context on Redis data dir
+  ansible.builtin.command: restorecon -Rv {{ redis_data_dir }}
+  changed_when: false
+  when:
+    - ansible_selinux is defined
+    - ansible_selinux.status == "enabled"
+
 - name: Deploy Redis configuration
   ansible.builtin.template:
     src: redis.conf.j2
@@ -13,11 +28,23 @@
     mode: '0644'
   notify: Restart Redis
 
+- name: Apply Redis Restart now if config changed
+  ansible.builtin.meta: flush_handlers
+
 - name: Ensure Redis is enabled and running
   ansible.builtin.service:
     name: redis
     enabled: true
     state: started
+
+- name: Verify Redis is using expected dir
+  ansible.builtin.command: >
+    redis-cli -h {{ redis_bind_ip }} -p {{ redis_port }}
+    {% if redis_requirepass | length > 0 %}-a {{ redis_requirepass }}{% endif %}
+    CONFIG GET dir
+  register: redis_dir
+  changed_when: false
+  failed_when: "'{{ redis_data_dir }}' not in redis_dir.stdout"
 
 - name: Wait for Redis port to be open on controller
   ansible.builtin.wait_for:
@@ -29,7 +56,7 @@
   ansible.builtin.command: "ss -lntp sport = :{{ redis_port }}"
   register: ss_listen
   changed_when: false
-  failed_when: ss_listen.stdout == ""
+  failed_when: ss_listen.rc !=0 or ss_listen.stdout == ""
 
 - name: Ping Redis (local, with auth if set)
   ansible.builtin.command: >

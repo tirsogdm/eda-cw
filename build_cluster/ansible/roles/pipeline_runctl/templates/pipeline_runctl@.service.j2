@@ -1,0 +1,14 @@
+[Unit]
+Description=Protein pipeline run control (%i)
+After=network-online.target redis.service rabbitmq-server.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=almalinux
+WorkingDirectory={{ pipeline_code_dir }}
+EnvironmentFile=/etc/protein_pipeline/pipeline.env
+ExecStart={{ pipeline_venv_dir }}/bin/python {{ pipeline_code_dir }}/runctl.py execute --run-id %i
+
+[Install]
+WantedBy=multi-user.target

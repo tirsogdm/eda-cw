@@ -7,6 +7,7 @@
     - role: code
     - role: redis
     - role: rabbitmq
+    - role: pipeline_runctl
     - role: prometheus
     - role: node_exporter
     - role: selinux

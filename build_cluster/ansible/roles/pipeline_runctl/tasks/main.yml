@@ -1,0 +1,32 @@
+- name: Ensure /etc/protein_pipeline exists
+  ansible.builtin.file:
+    path: /etc/protein_pipeline
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Ensure /runs directory exists
+  ansible.builtin.file:
+    path: "{{ pipeline_runs_dir }}"
+    state: directory
+    owner: almalinux
+    group: almalinux
+    mode: '0755'
+
+- name: Deploy pipeline runctl service env file
+  ansible.builtin.template:
+    src: pipeline.env.j2
+    dest: "/etc/protein_pipeline/pipeline.env"
+    owner: root
+    group: root
+    mode: '0640'
+
+- name: Deploy pipeline runctl systemd service
+  ansible.builtin.template:
+    src: pipeline_runctl@.service.j2
+    dest: "/etc/systemd/system/pipeline_runctl@.service"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: systemd daemon-reload

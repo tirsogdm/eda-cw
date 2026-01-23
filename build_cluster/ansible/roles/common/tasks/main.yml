@@ -17,7 +17,7 @@
     line: "{{ hostvars[groups['controller'][0]].ansible_host }} controller-node"
 
 - name: Create pipeline root directories
-  file:
+  ansible.builtin.file:
     path: "{{ item }}"
     state: directory
     mode: '0755'
