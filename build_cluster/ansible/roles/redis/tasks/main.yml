@@ -26,10 +26,14 @@
     owner: root
     group: root
     mode: '0644'
-  notify: Restart Redis
+  register: redis_conf
 
-- name: Apply Redis Restart now if config changed
-  ansible.builtin.meta: flush_handlers
+- name: Restart Redis immediately if config changed
+  ansible.builtin.systemd:
+    name: redis
+    state: restarted
+    daemon_reload: yes
+  when: redis_conf is changed
 
 - name: Ensure Redis is enabled and running
   ansible.builtin.service:

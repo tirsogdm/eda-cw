@@ -40,7 +40,7 @@ def init_run(
     run_dir: str,
 ) -> None:
     """
-    Initialize a new run in Redis - store mininmal metadata
+    Initialize a new run in Redis - store mininal metadata
     """
     mapping={
         "run_id": run_id,
@@ -52,7 +52,6 @@ def init_run(
         "run_dir": run_dir,
         "succeeded": "0",
         "failed": "0",
-        "profile_count": "0",
     }
 
     r.hset(k_run(run_id), mapping=mapping)
@@ -77,5 +76,6 @@ def add_protein(
             "task_id": task_id,
             "status": "submitted",
             "created_at": _utc_now_iso(),
+            "ok": "",
         }
     )

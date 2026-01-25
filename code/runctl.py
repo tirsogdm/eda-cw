@@ -24,7 +24,7 @@ PIPELINE_RUNS_DIR = Path(
 EXPERIMENT_IDS_FP = Path(
     os.environ.get(
         "EXPERIMENT_IDS_FP",
-        "experiment_ids.txt"
+        "~/protein_pipeline/code/experiment_ids.txt"
     )
 ).expanduser()
 
@@ -91,7 +91,13 @@ def prepare_run(
     run_dir = runs_dir / r_id
     run_dir.mkdir(parents=True, exist_ok=True)
 
+    ids_file = ids_file.expanduser()
+    if not ids_file.exists():
+        raise FileNotFoundError(f"Experiment ids file not found: {ids_file.resolve()}")
+
     selected = select_ids(ids_file, limit=limit, sample=sample, rng_seed=rng_seed)
+    if not selected:
+        raise ValueError(f"No experiment ids found in: {ids_file.resolve()}")
     submitted = len(selected)
 
     selected_fp = run_dir / "selected.ids.txt"

@@ -17,7 +17,20 @@ def analyse_protein(run_id: str, protein_id: str) -> dict:
         dict with keys:
             query_id, best_hit, best_evalue, best_score, score_mean, score_std, score_gmean
     """
-    return run_pipeline_for_id(protein_id)
+    try:
+        out = run_pipeline_for_id(protein_id)
+        if not isinstance(out, dict):
+            out = {}
+        out["ok"] = True
+        out.setdefault("query_id", protein_id)
+        return out
+    except Exception as e:
+        # Return a normal results so chord can complete (with callback)
+        return {
+            "ok": False,
+            "query_id": protein_id,
+            "error": str(e),
+        }
 
 @app.task(name="finalise_run")
 def finalise_run(results, run_id):
@@ -41,26 +54,39 @@ def finalise_run(results, run_id):
     out_dir.mkdir(parents=True, exist_ok=True)
 
     hits_rows = []
+    failures = []
     sum_std = 0.0
     sum_gmean = 0.0
     std_count = 0
     gmean_count = 0
+    ok_count = 0
 
     for item in results:
         if not isinstance(item, dict):
             continue
         
-        protein_id = item.get("query_id", "")
-        best_hit = item.get("best_hit", "")
+        ok = bool(item.get("ok", True))
+        protein_id = item.get("query_id") or ""
 
+        if not ok:
+            failures.append((protein_id, item.get("error", "unknown error")))
+            continue
+
+        ok_count += 1
+
+        best_hit = item.get("best_hit", "")
         if protein_id and best_hit:
             hits_rows.append((protein_id, best_hit))
 
         try:
             std_val = float(item.get("score_std", "nan"))
+        except (TypeError, ValueError):
+            std_val = float("nan")
+
+        try:
             gmean_val = float(item.get("score_gmean", "nan"))
         except (TypeError, ValueError):
-            continue
+            gmean_val = float("nan")
 
         if not math.isnan(std_val):
             sum_std += std_val
@@ -70,7 +96,6 @@ def finalise_run(results, run_id):
             sum_gmean += gmean_val
             gmean_count += 1
 
-    succeeded = len(hits_rows)
     mean_std = (sum_std / std_count) if std_count else "nan"
     mean_gmean = (sum_gmean / gmean_count) if gmean_count else "nan"
 
@@ -87,6 +112,14 @@ def finalise_run(results, run_id):
         fh_out.write("ave_std,ave_gmean\n")
         fh_out.write(f"{mean_std},{mean_gmean}\n")
 
+    # Failures_output.csv
+    failures_fp = out_dir / "failures_output.csv"
+    with failures_fp.open("w", encoding="utf-8") as fh_out:
+        fh_out.write("fasta_id,error\n")
+        for fasta_id, err in failures:
+            err = (err or "").replace("\n", " ").replace("\r", " ").replace(",", ";")
+            fh_out.write(f"{fasta_id},{err}\n")
+
     # Update run status + summary in Redis
     r.hset(
         run_key,
@@ -94,22 +127,25 @@ def finalise_run(results, run_id):
             "status": "completed",
             "finished_at": _utc_now_iso(),
             "received_results": str(len(results)),
-            "succeeded": str(succeeded),
+            "ok_results": str(ok_count),
+            "hits_count": str(len(hits_rows)),
             "ave_std": str(mean_std),
             "ave_gmean": str(mean_gmean),
             "std_count": str(std_count),
             "gmean_count": str(gmean_count),
             "hits_csv": str(hits_fp),
             "profile_csv": str(profile_fp),
+            "failures_csv": str(failures_fp),
         }
     )
 
     return {
         "run_id": run_id,
         "received_results": len(results),
-        "succeeded": succeeded,
+        "ok_results": ok_count,
         "hits_csv": str(hits_fp),
         "profile_csv": str(profile_fp),
+        "failures_csv": str(failures_fp),
     }
 
 # Signal handlers to update Redis state on task success/failure
@@ -130,20 +166,34 @@ def on_task_success(sender=None, result=None, **kwargs):
     run_id, protein_id = args[0], args[1]
     r = get_redis()
 
-    # Update per-protein
-    r.hset(
-        k_protein(run_id, protein_id),
-        mapping={
-            "status": "succeeded",
-            "finished_at": _utc_now_iso(),
-            "best_hit": result.get("best_hit", ""),
-            "score_std": str(result.get("score_std", "")),
-            "score_gmean": str(result.get("score_gmean", "")),
-        }
-    )
+    ok = bool(result.get("ok", True))
+    protein_key = k_protein(run_id, protein_id)
 
-    # Update per-run count
-    r.hincrby(k_run(run_id), "succeeded", 1)
+    if ok:
+        r.hset(
+            protein_key,
+            mapping={
+                "ok": "true",
+                "status": "succeeded",
+                "finished_at": _utc_now_iso(),
+                "best_hit": result.get("best_hit", ""),
+                "score_std": str(result.get("score_std", "")),
+                "score_gmean": str(result.get("score_gmean", "")),
+            }
+        )
+        r.hincrby(k_run(run_id), "succeeded", 1)
+    else:
+        r.hset(
+            protein_key,
+            mapping={
+                "ok": "false",
+                "status": "failed",
+                "finished_at": _utc_now_iso(),
+                "error": result.get("error", "unknown error"),
+            }
+        )
+        r.hincrby(k_run(run_id), "failed", 1)
+
 
 @task_failure.connect
 def on_task_failure(sender=None, exception=None, **kwargs):
@@ -158,16 +208,30 @@ def on_task_failure(sender=None, exception=None, **kwargs):
     run_id, protein_id = args[0], args[1]
     r = get_redis()
 
-    # Update per-protein
+    protein_key = k_protein(run_id, protein_id)
+
+    prev_status = r.hget(protein_key, "status") or ""
+    if prev_status in ("succeeded", "failed"):
+        r.hset(
+            protein_key,
+            mapping={
+                "hard_failed_at": _utc_now_iso(),
+                "hard_error": str(exception) if exception is not None else "unknown exception",
+                "hard_error_type": type(exception).__name__ if exception is not None else "UnknownType",
+            }
+        )
+        return
+    
     r.hset(
-        k_protein(run_id, protein_id),
+        protein_key,
         mapping={
+            "ok": "false",
             "status": "failed",
             "finished_at": _utc_now_iso(),
-            "error": str(exception) if exception is not None else "",
+            "error": str(exception) if exception is not None else "unknown exception",
+            "failure_kind": "hard",
         }
     )
-
     # Update per-run count
     r.hincrby(k_run(run_id), "failed", 1)
 
