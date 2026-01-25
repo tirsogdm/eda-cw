@@ -1,18 +1,15 @@
 - hosts: workers
-  become: yes
+  become: true
   roles:
     - role: common
       vars:
         python_deps: "{{ worker_python_deps }}"
     - role: code
+      vars:
+        celery_service: celery-worker
     - role: s4pred
     - role: hhsuite
     - role: data
     - role: selinux
     - role: celery
     - role: node_exporter
-  handlers:
-    - name: Restart celery-worker service
-      ansible.builtin.systemd:
-        name: celery-worker
-        state: restarted

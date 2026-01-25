@@ -60,4 +60,12 @@ redis_data_dir: "/var/lib/redis"
 
 # Celery configuration 
 celery_broker_url: "amqp://admin:abc123@controller-node:5672/protein"
+# -- clear up!!
 celery_backend_url: "redis://:{{ redis_requirepass }}@{{ redis_host }}:{{ redis_port }}/{{ redis_db }}"
+celery_results_backend: "redis://:{{ redis_requirepass }}@{{ redis_host }}:{{ redis_port }}/1"
+
+celery_user: almalinux
+celery_group: almalinux
+celery_queue: protein
+celery_app_module: tasks
+celery_loglevel: INFO

@@ -20,9 +20,11 @@ app = Celery(
 
 app.conf.update(
     task_default_queue = "protein",
-    
     task_track_started = True,
     result_expires = 3715200,
+    task_create_missing_queues = True,
 )
 
-task_default_queue = "protein"
+app.conf.task_routes = {
+    "finalise_run": {"queue": "finalise"},
+}

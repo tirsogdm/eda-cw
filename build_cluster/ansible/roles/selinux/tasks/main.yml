@@ -9,7 +9,7 @@
       semanage fcontext -a -t bin_t '{{ pipeline_venv_dir }}/bin(/.*)?'
   register: semanage_venv
   failed_when: semanage_venv.rc != 0 and ('already defined' not in (semanage_venv.stderr | lower))
-  changed_when: semanage_venv.rc == 0
+  changed_when: semanage_venv.rc == 0 
 
 - name: Restore SELinux contexts for venv bin directory
   ansible.builtin.command:

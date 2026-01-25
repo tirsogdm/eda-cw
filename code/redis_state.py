@@ -1,12 +1,10 @@
 import os
 import uuid
-from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 import redis
 
-def utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec='seconds')
+from utils import _utc_now_iso
 
 def get_redis() -> redis.Redis:
     """
@@ -39,8 +37,7 @@ def init_run(
     limit: Optional[int],
     sample: bool,
     submitted: int,
-    results_dir: str,
-    spec_path: Optional[str] = None
+    run_dir: str,
 ) -> None:
     """
     Initialize a new run in Redis - store mininmal metadata
@@ -48,17 +45,15 @@ def init_run(
     mapping={
         "run_id": run_id,
         "status": "submitted",
-        "created_at": utc_now_iso(),
+        "created_at": _utc_now_iso(),
         "limit": "" if limit is None else str(limit),
         "sample": "true" if sample else "false",
         "submitted": str(submitted),
-        "results_dir": results_dir,
+        "run_dir": run_dir,
         "succeeded": "0",
         "failed": "0",
         "profile_count": "0",
     }
-    if spec_path is not None:
-        mapping["spec_path"] = spec_path
 
     r.hset(k_run(run_id), mapping=mapping)
 
@@ -81,6 +76,6 @@ def add_protein(
             "protein_id": protein_id,
             "task_id": task_id,
             "status": "submitted",
-            "created_at": utc_now_iso(),
+            "created_at": _utc_now_iso(),
         }
     )

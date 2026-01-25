@@ -1,0 +1,4 @@
+- name: Restart celery service
+  ansible.builtin.systemd:
+    name: "{{ celery_service }}"
+    state: restarted

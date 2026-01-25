@@ -61,7 +61,7 @@ def run_hhsearch(a3m_file: str, hhr_file: str):
     """
     Run HHSearch to produce the hhr file.
     """
-    cmd = [HHSEARCH_BIN, '-i', a3m_file, '-cpu', '1', '-d', HHSEARCH_DB, '-o', hhr_file]
+    cmd = [HHSEARCH_BIN, '-i', a3m_file, '-cpu', '3', '-d', HHSEARCH_DB, '-o', hhr_file]
     print(f'STEP 3: RUNNING HHSEARCH: {" ".join(cmd)}')
     p = Popen(cmd, stdin=PIPE,stdout=PIPE, stderr=PIPE)
     out, err = p.communicate()

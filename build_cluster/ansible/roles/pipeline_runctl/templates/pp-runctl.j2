@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+set -a
+source /etc/protein_pipeline/pipeline.env
+set +a
+
+exec {{ pipeline_venv_dir }}/bin/python {{ pipeline_code_dir }}/runctl.py "$@"

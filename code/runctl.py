@@ -1,24 +1,20 @@
-import argparse
 import json
 import os
-import random
 import sys
+import random
+import argparse
+
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Sequence
+from celery import chord
 
-from tasks import analyse_protein
-from redis_state import get_redis, new_run_id, init_run, add_protein
+from utils import _utc_now_iso
+from tasks import analyse_protein, finalise_run
+from redis_state import get_redis, new_run_id, init_run, add_protein, k_run
 
-RESULTS_DIR = Path(
-    os.environ.get(
-        "RESULTS_DIR",
-        "~/protein_pipeline/code/results"
-    )
-).expanduser()
-
-RUNS_DIR = Path(
+PIPELINE_RUNS_DIR = Path(
     os.environ.get(
         "PIPELINE_RUNS_DIR",
         "~/protein_pipeline/runs"
@@ -30,7 +26,7 @@ EXPERIMENT_IDS_FP = Path(
         "EXPERIMENT_IDS_FP",
         "experiment_ids.txt"
     )
-)
+).expanduser()
 
 @dataclass(frozen=True)
 class RunSpec:
@@ -39,10 +35,7 @@ class RunSpec:
     limit: Optional[int]
     sample: bool
     selected_ids_file: str
-    results_dir: str
-
-def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    run_dir: str
 
 def select_ids(
     ids_file: Path,
@@ -77,8 +70,7 @@ def prepare_run(
     *,
     limit: Optional[int] = None,
     sample: bool = False,
-    results_dir: Path = RESULTS_DIR,
-    runs_dir: Path = RUNS_DIR,
+    runs_dir: Path = PIPELINE_RUNS_DIR,
     ids_file: Path = EXPERIMENT_IDS_FP,
     run_id: Optional[str] = None,
     rng_seed: Optional[int] = None
@@ -94,17 +86,16 @@ def prepare_run(
     Returns: (run_id, spec_path)
     """
     r = get_redis()
-    
-    results_dir.mkdir(parents=True, exist_ok=True)
-    runs_dir.mkdir(parents=True, exist_ok=True)
 
-    r_id = run_id if run_id is not None else new_run_id()
-    
+    r_id = run_id if run_id is not None else new_run_id()    
+    run_dir = runs_dir / r_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+
     selected = select_ids(ids_file, limit=limit, sample=sample, rng_seed=rng_seed)
     submitted = len(selected)
 
-    selected_fp = runs_dir / f"{r_id}.ids.txt"
-    spec_fp = runs_dir / f"{r_id}.json"
+    selected_fp = run_dir / "selected.ids.txt"
+    spec_fp = run_dir / "spec.json"
 
     selected_fp.write_text("\n".join(selected) + ("\n" if selected else ""))
 
@@ -114,7 +105,7 @@ def prepare_run(
         limit=limit,
         sample=sample,
         selected_ids_file=str(selected_fp),
-        results_dir=str(results_dir)
+        run_dir=str(run_dir)
     )
     spec_fp.write_text(json.dumps(asdict(spec), indent=2, sort_keys=True) + "\n")
 
@@ -124,8 +115,7 @@ def prepare_run(
         limit=limit,
         sample=sample,
         submitted=submitted,
-        results_dir=str(results_dir),
-        spec_path=str(spec_fp)
+        run_dir=str(run_dir),
     )
 
     print(f"[PREPARE] run_id={r_id} | submitted={submitted} | spec={spec_fp}")
@@ -139,14 +129,15 @@ def execute_run(*, run_id: str) -> int:
     """
     Execute an existing prepared run:
     - loads spec
-    - enqueues analyse_protein.delay(protein_id) for each selected id
-    - record task_id per protein in Redis
+    - creates chord(header=analyse_protein tasks, callback=finalise_run)
+    - records task_id per protein in Redis before submitting
+    - submits chord
 
     Returns: number of submitted tasks
     """
     r = get_redis()
 
-    spec_path  = RUNS_DIR / f"{run_id}.json"
+    spec_path  = PIPELINE_RUNS_DIR / run_id / "spec.json"
     if not spec_path.exists():
         raise FileNotFoundError(f"Run spec not found: {spec_path}")
     
@@ -160,20 +151,34 @@ def execute_run(*, run_id: str) -> int:
         raise FileNotFoundError(f"Selected ids file not found: {ids_fp}")
     
     protein_ids = [line.strip() for line in ids_fp.read_text().splitlines() if line.strip()]
+    if not protein_ids:
+        raise ValueError(f"No protein ids found in: {ids_fp}")
+    
+    # Build signature for chord header (allocating task ids)
+    sigs = [analyse_protein.s(run_id, pid) for pid in protein_ids]
+    frozen = [s.freeze() for s in sigs]
 
-    enqueued = 0
-    for protein_id in protein_ids:
-        res_obj = analyse_protein.delay(protein_id)
+    for pid, ar in zip(protein_ids, frozen):
         add_protein(
             r=r,
             run_id=run_id,
-            protein_id=protein_id,
-            task_id=res_obj.id
+            protein_id=pid,
+            task_id=ar.id
         )
-        enqueued += 1
-        print(f"[SUBMIT] run_id={run_id} | protein={protein_id} | task_id={res_obj.id}")
-    
-    print(f"[EXECUTE] run_id={run_id} | enqueued={enqueued}")
+        print(f"[SUBMIT] run_id={run_id} | protein={pid} | task_id={ar.id}")
+
+    # Mark run as running
+    r.hset(k_run(run_id), mapping={"status": "running", "started_at": _utc_now_iso()})
+
+    # Sumbit chord: callback runs on 'finalise' queue
+    callback = finalise_run.s(run_id)
+    chord_res = chord(sigs)(callback)
+
+    # Store enqueued and chord id for debugging/traceability
+    enqueued = len(protein_ids)  
+    r.hset(k_run(run_id), mapping={"enqueued": enqueued, "chord_id": chord_res.id})
+
+    print(f"[EXECUTE] run_id={run_id} | enqueued={enqueued} | chord_id={chord_res.id}")
     return enqueued
 
 def submit_run(

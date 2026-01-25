@@ -13,3 +13,5 @@
       - "--exclude=__pycache__"
       - "--exclude=*.pyc"
       - "--exclude=.git"
+  notify:
+    - Restart celery service

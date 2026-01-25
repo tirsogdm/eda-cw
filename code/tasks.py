@@ -1,8 +1,15 @@
-from celery_app import app
+from celery.signals import task_success, task_failure, task_prerun
+from pathlib import Path
+import math
+import json
+
+from redis_state import get_redis, k_run, k_protein
 from protein_pipeline import run_pipeline_for_id
+from utils import _utc_now_iso
+from celery_app import app
 
 @app.task(name="analyse_protein")
-def analyse_protein(protein_id: str) -> dict:
+def analyse_protein(run_id: str, protein_id: str) -> dict:
     """
     Celery task: run the 4-step pipeline for a single protein ID.
 
@@ -11,3 +18,174 @@ def analyse_protein(protein_id: str) -> dict:
             query_id, best_hit, best_evalue, best_score, score_mean, score_std, score_gmean
     """
     return run_pipeline_for_id(protein_id)
+
+@app.task(name="finalise_run")
+def finalise_run(results, run_id):
+    """
+    Chord callback:
+        - `results` is a list of dicts returned by `analyse_protein`
+        - writes hits_output.csv and profile.csv into the run's directory
+        - updates pp:run:{run_id} summary fields
+    """
+    r = get_redis()
+
+    if not isinstance(results, list):
+        results = []
+
+    run_key = k_run(run_id)
+    run_dir = r.hget(run_key, "run_dir") or ""
+    if not run_dir:
+        raise RuntimeError(f"Missing run_dir for run_id={run_id}")
+    
+    out_dir = Path(run_dir).expanduser()
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    hits_rows = []
+    sum_std = 0.0
+    sum_gmean = 0.0
+    std_count = 0
+    gmean_count = 0
+
+    for item in results:
+        if not isinstance(item, dict):
+            continue
+        
+        protein_id = item.get("query_id", "")
+        best_hit = item.get("best_hit", "")
+
+        if protein_id and best_hit:
+            hits_rows.append((protein_id, best_hit))
+
+        try:
+            std_val = float(item.get("score_std", "nan"))
+            gmean_val = float(item.get("score_gmean", "nan"))
+        except (TypeError, ValueError):
+            continue
+
+        if not math.isnan(std_val):
+            sum_std += std_val
+            std_count += 1
+        
+        if not math.isnan(gmean_val):
+            sum_gmean += gmean_val
+            gmean_count += 1
+
+    succeeded = len(hits_rows)
+    mean_std = (sum_std / std_count) if std_count else "nan"
+    mean_gmean = (sum_gmean / gmean_count) if gmean_count else "nan"
+
+    # Write hits_output.csv
+    hits_fp = out_dir / "hits_output.csv"
+    with hits_fp.open("w", encoding="utf-8") as fh_out:
+        fh_out.write("fasta_id,best_hit_id\n")
+        for fasta_id, best_hit_id in hits_rows:
+            fh_out.write(f"{fasta_id},{best_hit_id}\n")
+
+    # Write profile_output.csv
+    profile_fp = out_dir / "profile_output.csv"
+    with profile_fp.open("w", encoding="utf-8") as fh_out:
+        fh_out.write("ave_std,ave_gmean\n")
+        fh_out.write(f"{mean_std},{mean_gmean}\n")
+
+    # Update run status + summary in Redis
+    r.hset(
+        run_key,
+        mapping={
+            "status": "completed",
+            "finished_at": _utc_now_iso(),
+            "received_results": str(len(results)),
+            "succeeded": str(succeeded),
+            "ave_std": str(mean_std),
+            "ave_gmean": str(mean_gmean),
+            "std_count": str(std_count),
+            "gmean_count": str(gmean_count),
+            "hits_csv": str(hits_fp),
+            "profile_csv": str(profile_fp),
+        }
+    )
+
+    return {
+        "run_id": run_id,
+        "received_results": len(results),
+        "succeeded": succeeded,
+        "hits_csv": str(hits_fp),
+        "profile_csv": str(profile_fp),
+    }
+
+# Signal handlers to update Redis state on task success/failure
+
+@task_success.connect
+def on_task_success(sender=None, result=None, **kwargs):
+    if sender is None or sender.name != "analyse_protein":
+        return
+
+    if not isinstance(result, dict):
+        result = {}
+
+    req = getattr(sender, "request", None)
+    args = getattr(req, "args", None) or ()
+    if len(args) < 2:
+        return
+
+    run_id, protein_id = args[0], args[1]
+    r = get_redis()
+
+    # Update per-protein
+    r.hset(
+        k_protein(run_id, protein_id),
+        mapping={
+            "status": "succeeded",
+            "finished_at": _utc_now_iso(),
+            "best_hit": result.get("best_hit", ""),
+            "score_std": str(result.get("score_std", "")),
+            "score_gmean": str(result.get("score_gmean", "")),
+        }
+    )
+
+    # Update per-run count
+    r.hincrby(k_run(run_id), "succeeded", 1)
+
+@task_failure.connect
+def on_task_failure(sender=None, exception=None, **kwargs):
+    if sender is None or sender.name != "analyse_protein":
+        return
+    
+    req = getattr(sender, "request", None)
+    args = getattr(req, "args", None) or ()
+    if len(args) < 2:
+        return
+
+    run_id, protein_id = args[0], args[1]
+    r = get_redis()
+
+    # Update per-protein
+    r.hset(
+        k_protein(run_id, protein_id),
+        mapping={
+            "status": "failed",
+            "finished_at": _utc_now_iso(),
+            "error": str(exception) if exception is not None else "",
+        }
+    )
+
+    # Update per-run count
+    r.hincrby(k_run(run_id), "failed", 1)
+
+@task_prerun.connect
+def on_task_prerun(sender=None, task_id=None, args=None, **kwargs):
+    if sender is None or sender.name != "analyse_protein":
+        return
+
+    if not args or len(args) != 2:
+        return
+    
+    run_id, protein_id = args
+    r = get_redis()
+
+    r.hset(
+        k_protein(run_id, protein_id),
+        mapping={
+            "status": "running",
+            "started_at": _utc_now_iso(),
+        }
+    )

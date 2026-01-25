@@ -1,0 +1,25 @@
+[Unit]
+Description=Celery Worker on Controller (finalising tasks)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ celery_user }}
+Group={{ celery_group }}
+WorkingDirectory={{ pipeline_code_dir }}
+
+Environment=PY_BIN={{ pipeline_venv_dir}}/bin/python
+Environment=CELERY_BROKER_URL={{ celery_broker_url }}
+Environment=CELERY_RESULT_BACKEND={{ celery_results_backend }}
+Environment=PYTHONUNBUFFERED=1
+
+ExecStart={{ pipeline_venv_dir}}/bin/python -m celery -A {{ celery_app_module }} worker -Q finalise -n ctlw@%H --concurrency=1 --loglevel={{ celery_loglevel }}
+Restart=always
+RestartSec=5
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

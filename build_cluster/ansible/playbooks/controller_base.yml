@@ -5,10 +5,13 @@
       vars:
         python_deps: "{{ controller_python_deps }}"
     - role: code
-    - role: redis
+      vars:
+        celery_service: celery-ctl-worker
     - role: rabbitmq
+    - role: redis
     - role: pipeline_runctl
     - role: prometheus
     - role: node_exporter
     - role: selinux
+    - role: ctl-celery
     - role: streamlit
