@@ -1,0 +1,7 @@
+- name: Revert proteome DB on all workers back to default snapshot
+  hosts: workers
+  become: true
+  roles:
+    - role: proteome_switch
+      vars:
+        proteome_mode: "default"

@@ -40,7 +40,7 @@ def init_run(
     run_dir: str,
 ) -> None:
     """
-    Initialize a new run in Redis - store mininal metadata
+    Initialize a new run in Redis - store minimal metadata
     """
     mapping={
         "run_id": run_id,
@@ -65,12 +65,19 @@ def add_protein(
     """
     Add a new protein to the run in Redis - store minimal metadata
     """
+    key = k_protein(run_id, protein_id)
+
     # Memership set
     r.sadd(k_run_proteins(run_id), protein_id)
 
-    # Per-protein hash
+    # If protein already exists, DO NOT overwrite analysis
+    if r.exists(key):
+        r.hset(key, mapping={"task_id": task_id})
+        return
+
+    # Per-protein hash (only on first submit)
     r.hset(
-        k_protein(run_id, protein_id),
+        key,
         mapping={
             "protein_id": protein_id,
             "task_id": task_id,

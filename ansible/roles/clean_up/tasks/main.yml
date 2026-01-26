@@ -1,0 +1,15 @@
+- name: Remove all __pycache__ directories from pipeline code
+  ansible.builtin.find:
+    paths: "{{ pipeline_code_dir }}"
+    patterns: "__pycache__"
+    file_type: directory
+  register: pycache_dirs
+
+- name: Delete __pycache__ directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ pycache_dirs.files }}"
+  when: pycache_dirs.matched | int > 0
+  notify:
+    - Restart celery service

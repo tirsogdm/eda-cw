@@ -50,12 +50,16 @@ def run_parser(hhr_file: str, out_file: str):
     """
     cmd = [PY_BIN, './results_parser.py', hhr_file, out_file]
     print(f'STEP 4: RUNNING PARSER: {" ".join(cmd)}')
-    p = Popen(cmd, stdin=PIPE,stdout=PIPE, stderr=PIPE)
+
+    p = Popen(cmd, stdout=PIPE, stderr=PIPE)
     out, err = p.communicate()
+
     if p.returncode != 0:
-        print("Parser FAILED:", err.decode("utf-8"), file=sys.stderr)
-        sys.exit(1)
-    print(out.decode("utf-8"))
+        err_txt = (err or b"").decode("utf-8", errors="replace")
+        print("Parser FAILED:", err_txt, file=sys.stderr)
+        raise RuntimeError(f"Parser failed (rc={p.returncode}): {err_txt[:2000]}")
+
+    print((out or b"").decode("utf-8", errors="replace"))
 
 def run_hhsearch(a3m_file: str, hhr_file: str):
     """
@@ -63,11 +67,14 @@ def run_hhsearch(a3m_file: str, hhr_file: str):
     """
     cmd = [HHSEARCH_BIN, '-i', a3m_file, '-cpu', '3', '-d', HHSEARCH_DB, '-o', hhr_file]
     print(f'STEP 3: RUNNING HHSEARCH: {" ".join(cmd)}')
-    p = Popen(cmd, stdin=PIPE,stdout=PIPE, stderr=PIPE)
+
+    p = Popen(cmd, stdout=PIPE, stderr=PIPE)
     out, err = p.communicate()
+
     if p.returncode != 0:
-        print("HHSearch FAILED:", err.decode("utf-8"), file=sys.stderr)
-        sys.exit(1)
+        err_txt = (err or b"").decode("utf-8", errors="replace")
+        print("HHSearch FAILED:", err_txt, file=sys.stderr)
+        raise RuntimeError(f"HHSearch failed (rc={p.returncode}): {err_txt[:2000]}")
 
 def read_horiz(tmp_file: str, horiz_file: str, a3m_file: str):
     """
@@ -94,13 +101,17 @@ def run_s4pred(input_file: str, out_file: str):
     """
     cmd = [PY_BIN, S4PRED_SCRIPT, '-t', 'horiz', '-T', '1', input_file]
     print(f'STEP 1: RUNNING S4PRED: {" ".join(cmd)}')
-    p = Popen(cmd, stdin=PIPE,stdout=PIPE, stderr=PIPE)
+
+    p = Popen(cmd, stdout=PIPE, stderr=PIPE)
     out, err = p.communicate()
+
     if p.returncode != 0:
-        print("S4Pred FAILED:", err.decode("utf-8"), file=sys.stderr)
-        sys.exit(1)
+        err_txt = (err or b"").decode("utf-8", errors="replace")
+        print("S4Pred FAILED:", err_txt, file=sys.stderr)
+        raise RuntimeError(f"S4Pred failed (rc={p.returncode}): {err_txt[:2000]}")
+
     with open(out_file, "w") as fh_out:
-        fh_out.write(out.decode("utf-8"))
+        fh_out.write((out or b"").decode("utf-8", errors="replace"))
 
 def get_result(parse_file: str) -> dict:
     """
@@ -171,10 +182,9 @@ def run_pipeline_for_id(protein_id: str) -> dict:
 
 
 if __name__ == "__main__":
-    # TODO: Extend to accept either id,list of ids, FASTA file?
     if len(sys.argv) != 2:
-        print("Usage: python3 protein_pipeline.py PROTEIN_ID", file=sys.stderr)
-        sys.exit(1)
+        # print("Usage: python3 protein_pipeline.py PROTEIN_ID", file=sys.stderr)
+        raise SystemExit("Usage: python3 protein_pipeline.py PROTEIN_ID")
     
     protein_id = sys.argv[1]
     result = run_pipeline_for_id(protein_id)

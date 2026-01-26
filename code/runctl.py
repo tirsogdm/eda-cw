@@ -165,6 +165,7 @@ def execute_run(*, run_id: str) -> int:
     frozen = [s.freeze() for s in sigs]
 
     for pid, ar in zip(protein_ids, frozen):
+        # add protein is idempotent - will not overwrite existing analysis
         add_protein(
             r=r,
             run_id=run_id,
@@ -174,7 +175,7 @@ def execute_run(*, run_id: str) -> int:
         print(f"[SUBMIT] run_id={run_id} | protein={pid} | task_id={ar.id}")
 
     # Mark run as running
-    r.hset(k_run(run_id), mapping={"status": "running", "started_at": _utc_now_iso()})
+    r.hset(k_run(run_id), mapping={"status": "running", "started_at": _utc_now_iso(), "finished_at": "", "succeeded": "0", "failed": "0"})
 
     # Sumbit chord: callback runs on 'finalise' queue
     callback = finalise_run.s(run_id)

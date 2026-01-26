@@ -5,7 +5,7 @@ import sys
 
 if len(sys.argv) not in (2, 3):
     print("Usage: python results_parser.py HHR_FILE [OUT_CSV]", file=sys.stderr)
-    sys.exit(1)
+    raise SystemExit(1)
 
 hhr_path = sys.argv[1]
 out_path = sys.argv[2] if len(sys.argv) == 3 else "hhr_parse.out"

@@ -7,6 +7,9 @@
     - role: code
       vars:
         celery_service: celery-worker
+    - role: clean_up
+      vars:
+        celery_service: celery-worker
     - role: s4pred
     - role: hhsuite
     - role: data

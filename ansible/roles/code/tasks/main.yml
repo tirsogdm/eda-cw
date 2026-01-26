@@ -8,8 +8,9 @@
   ansible.builtin.synchronize:
     src: "{{ repo_dir }}/code/"
     dest: "{{ pipeline_code_dir }}/"
-    delete: false
+    delete: true
     rsync_opts:
+      - "--exclude=tmp"
       - "--exclude=__pycache__"
       - "--exclude=*.pyc"
       - "--exclude=.git"

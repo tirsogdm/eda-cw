@@ -55,3 +55,12 @@
   args:
     chdir: "{{ pipeline_code_dir }}"
     creates: "{{ proteome_db_path }}"
+
+- name: Snapshot default proteome DB for easy revert
+  ansible.builtin.copy:
+    src: "{{ proteome_db_path }}"
+    dest: "{{ proteome_db_default_path }}"
+    remote_src: true
+    owner: almalinux
+    group: almalinux
+    mode: "0644"

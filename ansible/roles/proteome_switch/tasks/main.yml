@@ -1,0 +1,61 @@
+- name: Ensure data directory exists
+  ansible.builtin.file:
+    path: "{{ pipeline_data_dir }}"
+    state: directory
+    owner: almalinux
+    group: almalinux
+    mode: '0755'
+
+- name: Custom mode | copy custom FASTA from controller to worker
+  ansible.builtin.copy:
+    src: "{{ custom_fasta_controller_path }}"
+    dest: "{{ custom_fasta_worker_path }}"
+    owner: almalinux
+    group: almalinux
+    mode: '0644'
+  when: proteome_mode == "custom"
+
+- name: Custom mode | remove existing proteome DB so rebuild is guaranteed
+  ansible.builtin.file:
+    path: "{{ proteome_db_path }}"
+    state: absent
+  when: proteome_mode == "custom"
+
+- name: Custom mode | rebuild proteome DB from custom FASTA
+  ansible.builtin.command:
+    cmd: >
+      {{ pipeline_venv_dir }}/bin/python
+      {{ pipeline_code_dir }}/build_proteome_db.py
+      {{ custom_fasta_worker_path }}
+      {{ proteome_db_path }}
+  args:
+    chdir: "{{ pipeline_code_dir }}"
+  become_user: almalinux
+  when: proteome_mode == "custom"
+
+- name: Default mode | ensure snapshots exists (created at provision time)
+  ansible.builtin.stat:
+    path: "{{ proteome_db_default_path }}"
+  register: default_db_stat
+  when: proteome_mode == "default"
+
+- name: Default mode | fail if default snapshot missing
+  ansible.builtin.fail:
+    msg: "Default proteome DB snapshot not found at {{ proteome_db_default_path }}. Re-run worker base playbook or create snapshot."
+  when: proteome_mode == "default" and not default_db_stat.stat.exists
+
+- name: Default mode | restore default snapshot over active DB
+  ansible.builtin.copy:
+    src: "{{ proteome_db_default_path }}"
+    dest: "{{ proteome_db_path }}"
+    remote_src: true
+    owner: almalinux
+    group: almalinux
+    mode: "0644"
+  when: proteome_mode == "default"
+
+- name: Restart celery-worker to ensure new DB is used
+  ansible.builtin.systemd:
+    name: celery-worker
+    state: restarted
+    daemon_reload: true

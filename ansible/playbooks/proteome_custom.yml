@@ -1,0 +1,22 @@
+- name: Deploy custom FASTA and rebuild proteome DB on all workers
+  hosts: workers
+  become: true
+  pre_tasks:
+    - name: Check custom FASTA exists on controller (where Ansible is running)
+      ansible.builtin.stat:
+        path: "{{ custom_fasta_controller_path }}"
+      register: custom_fasta_stat
+      delegate_to: localhost
+      run_once: true
+    
+    - name: Fail if custom FASTA is missing on controller
+      ansible.builtin.fail:
+        msg: "Custom FASTA file not found on controller: {{ custom_fasta_controller_path }}. SCP it there first."
+      when: not custom_fasta_stat.stat.exists
+      delegate_to: localhost
+      run_once: true
+    
+  roles:
+    - role: proteome_switch
+      vars:
+        proteome_mode: "custom"

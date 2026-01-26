@@ -47,8 +47,8 @@ def build_db(fasta_path: str, db_path: str) -> None:
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        print("Usage: python build_proteome_db.py <input_fasta> <output_db>")
-        sys.exit(1)
+        # print("Usage: python build_proteome_db.py <input_fasta> <output_db>")
+        raise SystemExit("Usage: python build_proteome_db.py <input_fasta> <output_db>")
     
     fasta = sys.argv[1]
     db = sys.argv[2]

@@ -42,7 +42,12 @@ pdb70_tar_url: "https://wwwuser.gwdg.de/~compbiol/data/hhsuite/databases/hhsuite
 proteome_fasta_url: "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/reference_proteomes/Eukaryota/UP000000589/UP000000589_10090.fasta.gz"
 proteome_fasta_filename: "UP000000589_10090.fasta"
 proteome_fasta_path: "{{ pipeline_data_dir }}/{{ proteome_fasta_filename }}"
-proteome_db_path: "{{ pipeline_data_dir }}/mouse_proteome.db"
+proteome_db_path: "{{ pipeline_data_dir }}/proteome.db"
+proteome_db_default_path: "{{ pipeline_data_dir }}/mouse_proteome.backup.db"
+
+# -- Fasta switcher configuration
+custom_fasta_controller_path: "{{ pipeline_data_dir }}/custom.fasta"
+custom_fasta_worker_path: "{{ pipeline_data_dir }}/custom.fasta"
 
 # Prometheus & Node Exporter configuration
 node_exporter_version: "1.7.0"

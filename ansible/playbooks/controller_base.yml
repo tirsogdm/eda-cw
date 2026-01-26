@@ -7,6 +7,9 @@
     - role: code
       vars:
         celery_service: celery-ctl-worker
+    - role: clean_up
+      vars:
+        celery_service: celery-ctl-worker
     - role: rabbitmq
     - role: redis
     - role: pipeline_runctl

@@ -1,7 +1,11 @@
 from celery.signals import task_success, task_failure, task_prerun
 from pathlib import Path
+import traceback
 import math
 import json
+import socket
+import time
+import os
 
 from redis_state import get_redis, k_run, k_protein
 from protein_pipeline import run_pipeline_for_id
@@ -17,6 +21,46 @@ def analyse_protein(run_id: str, protein_id: str) -> dict:
         dict with keys:
             query_id, best_hit, best_evalue, best_score, score_mean, score_std, score_gmean
     """
+    host = socket.gethostname()
+    pid  = os.getpid()
+    now  = time.strftime("%Y-%m-%d %H:%M:%S")
+
+    # which file/code version is actually running
+    import tasks as tasks_mod
+    st = f"[analyse_protein] {now} host={host} pid={pid} tasks_file={getattr(tasks_mod,'__file__',None)} run_id={run_id} protein_id={protein_id}"
+    print(st, flush=True)
+
+    r = get_redis()
+    status = r.hget(k_protein(run_id, protein_id), "status") or ""
+
+    # proves what Redis returned on THIS worker at runtime
+    print(f"[analyse_protein] host={host} protein_id={protein_id} redis_status={status!r} type={type(status)}", flush=True)
+
+    if isinstance(status, bytes):
+        status = status.decode("utf-8", errors="replace")
+    
+    if status == "succeeded":
+        h = r.hgetall(k_protein(run_id, protein_id))
+
+        def ds(x):
+            if isinstance(x, bytes):
+                return x.decode("utf-8", errors="replace")
+            return x
+        
+        h = {ds(k): ds(v) for k, v in h.items()}
+
+        # query_id, best_hit, best_evalue, best_score, score_mean, score_std, score_gmean
+        return {
+            "query_id": protein_id,
+            "ok": True,
+            "best_hit": h.get("best_hit", ""),
+            "best_evalue": h.get("best_evalue", ""),
+            "best_score": h.get("best_score", ""),
+            "score_mean": h.get("score_mean", ""),
+            "score_std": h.get("score_std", ""),
+            "score_gmean": h.get("score_gmean", ""),    
+        }
+
     try:
         out = run_pipeline_for_id(protein_id)
         if not isinstance(out, dict):
@@ -24,12 +68,19 @@ def analyse_protein(run_id: str, protein_id: str) -> dict:
         out["ok"] = True
         out.setdefault("query_id", protein_id)
         return out
-    except Exception as e:
+    
+    except KeyboardInterrupt:
+        raise
+
+    except BaseException as e:
+        msg = f"{type(e).__name__}: {str(e)}"
+        tb = traceback.format_exc(limit=20)
         # Return a normal results so chord can complete (with callback)
         return {
             "ok": False,
             "query_id": protein_id,
-            "error": str(e),
+            "error": msg[:2000],
+            "traceback": tb[:8000],
         }
 
 @app.task(name="finalise_run")
@@ -245,9 +296,17 @@ def on_task_prerun(sender=None, task_id=None, args=None, **kwargs):
     
     run_id, protein_id = args
     r = get_redis()
+    key = k_protein(run_id, protein_id)
+    
+    status = r.hget(key, "status") or ""
+    if isinstance(status, bytes):
+        status = status.decode("utf-8", errors="replace")
 
+    if status == "succeeded":
+        return
+    
     r.hset(
-        k_protein(run_id, protein_id),
+        key,
         mapping={
             "status": "running",
             "started_at": _utc_now_iso(),
