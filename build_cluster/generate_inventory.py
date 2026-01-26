@@ -1,61 +1,60 @@
 #!/usr/bin/env python3
 
 import json
-import subprocess
-import argparse
-
-def run(command):
-    return subprocess.run(command, capture_output=True, encoding='UTF-8')
+import sys 
+from subprocess import run, PIPE
+from pathlib import Path
 
 def generate_inventory():
-    command = "terraform output --json vm_ips".split()
-    ip_data = json.loads(run(command).stdout)
+    # Relative path to Terraform directory
+    script_dir = Path(__file__).resolve().parent
+    tf_dir = script_dir.parent
 
-    host_vars = {}
+    # 1) Get terraform outputs
+    cmd = ["terraform", f"-chdir={tf_dir}", "output", "--json"]
+    out = run(cmd, capture_output=True, text=True, check=True)
+    data = json.loads(out.stdout)
 
-    counter = 0
-    workers = []
+    worker_ips = data["worker_ips"]["value"]
+    controller_ip = data["host_ips"]["value"]
+    if isinstance(controller_ip, list):
+        controller_ip = controller_ip[0]
 
-    for a in ip_data:
-        name = a
-        host_vars[name] = { "ip": [a] }
-        workers.append(name)
-        counter += 1
+    # TESTING -- remove line
+    # worker_ips = [ip for ip in worker_ips if ip in ["10.134.12.177"]]
 
-    _meta = {}
-    _meta["hostvars"] = host_vars
-    _all = { "children": ["workers"] }
+    hostvars = {}
+    groups = {}
 
-    _workers = { "hosts": workers }
+    # Controller group
+    host_name = "controller-node"
+    hostvars[host_name] = {
+        "ansible_host": controller_ip,
+        "ansible_user": "almalinux",
+    }
+    groups["controller"] = {"hosts": [host_name]}
 
-    _jd = {}
-    _jd["_meta"] = _meta
-    _jd["all"] = _all
-    _jd["workers"] = _workers
+    # Workers group
+    worker_names = []
+    for i, ip in enumerate(worker_ips, start=1):
+        name = f"worker-node{i}"
+        worker_names.append(name)
+        hostvars[name] = {
+            "ansible_host": ip,
+            "ansible_user": "almalinux",
+        }
+    groups["workers"] = {"hosts": worker_names}
 
-    jd = json.dumps(_jd, indent=4)
-    return jd
+    # All group
+    groups["all"] = {"children": ["controller", "workers"]}
 
+    inventory = {
+        "_meta": {"hostvars": hostvars},
+        **groups,
+    }
+
+    return json.dumps(inventory, indent=4)
 
 if __name__ == "__main__":
-
-    ap = argparse.ArgumentParser(
-        description = "Generate an inventory from Terraform.",
-        prog = __file__
-    )
-
-    mo = ap.add_mutually_exclusive_group()
-    mo.add_argument("--list",action="store", nargs="*", default="dummy", help="Show JSON of all managed hosts")
-    mo.add_argument("--host",action="store", help="Display vars related to the host")
-
-    args = ap.parse_args()
-
-    if args.host:
-        print(json.dumps({}))
-    elif len(args.list) >= 0:
-        jd = generate_inventory()
-        print(jd)
-    else:
-        raise ValueError("Expecting either --host $HOSTNAME or --list")
-
-    
+    inv = generate_inventory()
+    print(inv)

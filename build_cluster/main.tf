@@ -76,6 +76,16 @@ resource "harvester_virtualmachine" "host" {
     update = "5m"
     delete = "5m"
   }
+
+  # Instance labels
+  tags = {
+    condenser_ingress_isEnabled = true
+    condenser_ingress_isAllowed = true
+    condenser_ingress_prometheus_hostname = "prometheus-${var.username}"
+    condenser_ingress_prometheus_port = 9090
+    condenser_ingress_streamlit_hostname = "protein-pipeline-${var.username}"
+    condenser_ingress_streamlit_port = 8501
+  }
 }
 
 resource "harvester_virtualmachine" "worker" {
